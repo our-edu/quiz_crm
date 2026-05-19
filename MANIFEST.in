@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include quiz_crm *.css
+recursive-include quiz_crm *.csv
+recursive-include quiz_crm *.html
+recursive-include quiz_crm *.ico
+recursive-include quiz_crm *.js
+recursive-include quiz_crm *.json
+recursive-include quiz_crm *.md
+recursive-include quiz_crm *.png
+recursive-include quiz_crm *.py
+recursive-include quiz_crm *.svg
+recursive-include quiz_crm *.txt
+recursive-exclude quiz_crm *.pyc
