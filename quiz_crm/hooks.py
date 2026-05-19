@@ -38,6 +38,8 @@ web_include_css = "quiz_crm.bundle.css"
 website_route_rules = [
 	{"from_route": f"/{get_quiz_path()}/<path:app_path>", "to_route": "_quiz_crm"},
 	{"from_route": f"/{get_quiz_path()}", "to_route": "_quiz_crm"},
+	{"from_route": "/lms/<path:app_path>", "to_route": "_quiz_crm"},
+	{"from_route": "/lms", "to_route": "_quiz_crm"},
 	{
 		"from_route": "/courses/<course_name>/<certificate_id>",
 		"to_route": "certificate",
