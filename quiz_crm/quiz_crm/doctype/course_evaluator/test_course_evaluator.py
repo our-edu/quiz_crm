@@ -73,7 +73,7 @@ class TestEvaluatorRoleCRUD(BaseTestUtils):
 		self.admin = self._create_user(
 			"frappe@example.com", "Frappe", "Admin", ["Moderator", "Course Creator", "Batch Evaluator"]
 		)
-		self.test_user = self._create_user("eval_test@example.com", "Eval", "Tester", ["LMS Student"])
+		self.test_user = self._create_user("eval_test@example.com", "Eval", "Tester", ["Quiz Student"])
 
 	def _has_batch_evaluator_role(self, user):
 		return frappe.db.exists("Has Role", {"parent": user, "role": "Batch Evaluator"})
@@ -110,8 +110,8 @@ class TestEvaluatorRoleCRUD(BaseTestUtils):
 
 		self.assertFalse(self._has_batch_evaluator_role(self.test_user.email))
 
-	def test_reject_non_lms_role(self):
-		"""Assigning a role outside LMS_ROLES should raise PermissionError."""
+	def test_reject_non_quiz_role(self):
+		"""Assigning a role outside QUIZ_ROLES should raise PermissionError."""
 		frappe.set_user("frappe@example.com")
 		self.assertRaises(frappe.PermissionError, save_role, self.test_user.email, "System Manager", 1)
 		frappe.set_user("Administrator")

@@ -115,7 +115,7 @@ def get_evaluator_schedule(evaluator):
 def get_booked_slots(evaluator, start_date, end_date):
 	date = ["between", [start_date, end_date]]
 	return frappe.get_all(
-		"LMS Certificate Request",
+		"Certificate Request",
 		filters={
 			"evaluator": evaluator,
 			"date": date,
@@ -180,7 +180,7 @@ def get_unavailable_dates(evaluator):
 def get_schedule_range_end_date(start_date, batch=None):
 	end_date = add_days(start_date, 60)
 	if batch:
-		batch_end_date = frappe.db.get_value("LMS Batch", batch, "evaluation_end_date")
+		batch_end_date = frappe.db.get_value("Batch", batch, "evaluation_end_date")
 		if batch_end_date and batch_end_date < getdate(end_date):
 			end_date = getdate(batch_end_date)
 

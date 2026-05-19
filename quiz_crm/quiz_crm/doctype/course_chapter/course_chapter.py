@@ -13,4 +13,4 @@ class CourseChapter(Document):
 
 	def update_lesson_count(self):
 		"""Update lesson count in the course"""
-		frappe.db.set_value("LMS Course", self.course, "lessons", get_lesson_count(self.course))
+		frappe.db.set_value("Course", self.course, "lessons", get_lesson_count(self.course))

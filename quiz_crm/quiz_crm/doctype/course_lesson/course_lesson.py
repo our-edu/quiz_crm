@@ -29,7 +29,7 @@ class CourseLesson(Document):
 			return
 
 		enrollments = frappe.db.get_all(
-			"LMS Enrollment",
+			"Enrollment",
 			filters={"course": self.course},
 			fields=["name", "member"],
 		)
@@ -43,7 +43,7 @@ class CourseLesson(Document):
 			recalculate_course_progress(self.course, enrollment.member)
 
 	def validate_quiz_id(self):
-		if self.quiz_id and not frappe.db.exists("LMS Quiz", self.quiz_id):
+		if self.quiz_id and not frappe.db.exists("Quiz", self.quiz_id):
 			frappe.throw(_("Invalid Quiz ID"))
 
 		if self.content:
@@ -57,10 +57,10 @@ class CourseLesson(Document):
 		for block in content.get("blocks"):
 			if block.get("type") == "quiz":
 				quiz = block.get("data").get("quiz")
-				if not frappe.db.exists("LMS Quiz", quiz):
+				if not frappe.db.exists("Quiz", quiz):
 					frappe.throw(_("Invalid Quiz ID in content"))
 				frappe.db.set_value(
-					"LMS Quiz",
+					"Quiz",
 					quiz,
 					{
 						"course": self.course,
@@ -74,16 +74,16 @@ def save_progress(lesson: str, course: str, scorm_details: dict = None):
 	"""
 	Note: Pass the argument scorm_details as a dict if it is SCORM related save_progress
 	"""
-	membership = frappe.db.exists("LMS Enrollment", {"course": course, "member": frappe.session.user})
+	membership = frappe.db.exists("Enrollment", {"course": course, "member": frappe.session.user})
 	if not membership:
 		return 0
 
-	frappe.db.set_value("LMS Enrollment", membership, "current_lesson", lesson, update_modified=False)
+	frappe.db.set_value("Enrollment", membership, "current_lesson", lesson, update_modified=False)
 	progress_already_exists = frappe.db.exists(
-		"LMS Course Progress", {"lesson": lesson, "member": frappe.session.user}
+		"Course Progress", {"lesson": lesson, "member": frappe.session.user}
 	)
 	lesson_already_completed = frappe.db.exists(
-		"LMS Course Progress",
+		"Course Progress",
 		{"lesson": lesson, "member": frappe.session.user, "status": "Complete"},
 	)
 
@@ -96,7 +96,7 @@ def save_progress(lesson: str, course: str, scorm_details: dict = None):
 	if not progress_already_exists and quiz_completed and assignment_completed and not scorm_details:
 		frappe.get_doc(
 			{
-				"doctype": "LMS Course Progress",
+				"doctype": "Course Progress",
 				"lesson": lesson,
 				"status": "Complete",
 				"member": frappe.session.user,
@@ -106,7 +106,7 @@ def save_progress(lesson: str, course: str, scorm_details: dict = None):
 		# Create new SCORM progress
 		frappe.get_doc(
 			{
-				"doctype": "LMS Course Progress",
+				"doctype": "Course Progress",
 				"lesson": lesson,
 				"status": "Complete" if scorm_details.is_complete else "Partially Complete",
 				"member": frappe.session.user,
@@ -116,7 +116,7 @@ def save_progress(lesson: str, course: str, scorm_details: dict = None):
 	elif scorm_details and not lesson_already_completed and progress_already_exists:
 		# Update Existing SCORM Progress
 		frappe.db.set_value(
-			"LMS Course Progress",
+			"Course Progress",
 			progress_already_exists,
 			{
 				"lesson": lesson,
@@ -128,10 +128,10 @@ def save_progress(lesson: str, course: str, scorm_details: dict = None):
 
 	progress = get_course_progress(course)
 	if not is_demo_course(course):
-		capture("course_progress", "lms")
+		capture("course_progress", "quiz_crm")
 
 	# Had to get doc, as on_change doesn't trigger when you use set_value. The trigger is necessary for badge to get assigned.
-	enrollment = frappe.get_doc("LMS Enrollment", membership)
+	enrollment = frappe.get_doc("Enrollment", membership)
 	enrollment.progress = progress
 	enrollment.flags.ignore_version = True
 	enrollment.save()
@@ -168,9 +168,9 @@ def get_quiz_progress(lesson):
 		quizzes = [value for name, value in macros if name == "Quiz"]
 
 	for quiz in quizzes:
-		passing_percentage = frappe.db.get_value("LMS Quiz", quiz, "passing_percentage")
+		passing_percentage = frappe.db.get_value("Quiz", quiz, "passing_percentage")
 		if not frappe.db.exists(
-			"LMS Quiz Submission",
+			"Quiz Submission",
 			{
 				"quiz": quiz,
 				"member": frappe.session.user,
@@ -198,7 +198,7 @@ def get_assignment_progress(lesson):
 
 	for assignment in assignments:
 		if not frappe.db.exists(
-			"LMS Assignment Submission",
+			"Assignment Submission",
 			{"assignment": assignment, "member": frappe.session.user},
 		):
 			return False

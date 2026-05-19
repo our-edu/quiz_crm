@@ -7,13 +7,13 @@ from frappe.utils import cint, flt
 RE_SLUG_NOTALLOWED = re.compile("[^a-z0-9]+")
 
 
-def get_lms_path():
-	path = frappe.conf.get("lms_path") or "lms"
+def get_quiz_path():
+	path = frappe.conf.get("quiz_path") or "quiz_crm"
 	return path.strip("/")
 
 
-def get_lms_route(path=""):
-	base = f"/{get_lms_path()}"
+def get_quiz_route(path=""):
+	base = f"/{get_quiz_path()}"
 	if not path:
 		return base
 	return f"{base}/{path.lstrip('/')}"
@@ -128,7 +128,7 @@ def get_lesson_details(chapter: dict, progress: bool = False):
 
 def get_progress(course: str, lesson: str):
 	return frappe.db.exists(
-		"LMS Course Progress",
+		"Course Progress",
 		{"course": course, "lesson": lesson, "member": frappe.session.user, "status": "Complete"},
 	)
 
@@ -147,7 +147,7 @@ def get_course_progress(course: str, member: str = None):
 	if not lesson_count:
 		return 0
 	completed_lessons = frappe.db.count(
-		"LMS Course Progress",
+		"Course Progress",
 		{"course": course, "member": member or frappe.session.user, "status": "Complete"},
 	)
 	precision = cint(frappe.db.get_default("float_precision")) or 3
@@ -157,7 +157,7 @@ def get_course_progress(course: str, member: str = None):
 def recalculate_course_progress(course: str, member: str):
 	progress = get_course_progress(course, member)
 	membership = frappe.db.get_value(
-		"LMS Enrollment",
+		"Enrollment",
 		{
 			"member": member,
 			"course": course,
@@ -165,11 +165,11 @@ def recalculate_course_progress(course: str, member: str):
 		"name",
 	)
 	if membership:
-		frappe.db.set_value("LMS Enrollment", membership, "progress", progress)
+		frappe.db.set_value("Enrollment", membership, "progress", progress)
 
 
 def is_demo_course(course: str) -> bool:
-	title = frappe.db.get_value("LMS Course", course, "title")
+	title = frappe.db.get_value("Course", course, "title")
 	return title == "A guide to Frappe Learning"
 
 
@@ -196,7 +196,7 @@ def get_instructors(doctype: str, docname: str):
 
 def get_average_rating(course: str):
 	reviews = frappe.get_all(
-		"LMS Course Review",
+		"Course Review",
 		{"course": course},
 		["rating"],
 	)
@@ -243,7 +243,7 @@ def get_evaluator(course: str, batch: str = None):
 			"evaluator",
 		)
 	else:
-		evaluator = frappe.db.get_value("LMS Course", course, "evaluator")
+		evaluator = frappe.db.get_value("Course", course, "evaluator")
 	return evaluator
 
 

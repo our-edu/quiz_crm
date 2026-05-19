@@ -28,7 +28,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Course",
-   "options": "LMS Course",
+   "options": "Course",
    "reqd": 1
   },
   {
@@ -137,7 +137,7 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "LMS Student",
+   "role": "Quiz Student",
    "select": 1,
    "share": 1
   },
