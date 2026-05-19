@@ -1,6 +1,6 @@
 [project]
 name = "quiz_crm"
-dynamic = ["version"]
+version = "0.0.1"
 requires-python = ">=3.10"
 description = "Quiz and Question management for CRM"
 authors = [
@@ -9,5 +9,5 @@ authors = [
 dependencies = ["frappe"]
 
 [build-system]
-requires = ["flit_core >=3.4,<4"]
-build-backend = "flit_core:buildapi"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: quiz_crm
+Version: 0.0.1
+Summary: Quiz and Question management for CRM
+Author: OurEdu
+Author-email: OurEdu <dev@ouredu.com>
+Requires-Python: >=3.10
+Requires-Dist: frappe
+Dynamic: author
