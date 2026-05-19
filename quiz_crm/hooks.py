@@ -1,3 +1,5 @@
+import frappe
+
 app_name = "quiz_crm"
 app_title = "Quiz CRM"
 app_publisher = "OurEdu"
@@ -5,74 +7,43 @@ app_description = "Quiz and Question management for CRM"
 app_email = "dev@ouredu.com"
 app_license = "MIT"
 
+
+def get_quiz_path():
+	path = "quiz"
+	if frappe.conf and frappe.conf.get("quiz_path"):
+		path = frappe.conf.get("quiz_path")
+	return path.strip("/")
+
+
 # Apps
 # ------------------
 
-# required_apps = []
-
-# Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "quiz_crm",
-# 		"logo": "/assets/quiz_crm/images/quiz_crm.png",
-# 		"title": "Quiz CRM",
-# 		"route": "/quiz_crm",
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "quiz_crm",
+		"logo": "/assets/quiz_crm/images/quiz_crm.png",
+		"title": "Quiz CRM",
+		"route": f"/{get_quiz_path()}",
+	}
+]
 
 # Includes in <head>
 # ------------------
 
-# include js, css files in header of desk.html
-# app_include_css = "/assets/quiz_crm/css/quiz_crm.css"
-# app_include_js = "/assets/quiz_crm/js/quiz_crm.js"
+web_include_css = "quiz_crm.bundle.css"
 
-# include js, css files in header of web template
-# web_include_css = "/assets/quiz_crm/css/quiz_crm.css"
-# web_include_js = "/assets/quiz_crm/js/quiz_crm.js"
+# Website Route Rules
+# --------------------
 
-# Home Pages
-# ----------
+website_route_rules = [
+	{"from_route": f"/{get_quiz_path()}/<path:app_path>", "to_route": "_quiz_crm"},
+	{"from_route": f"/{get_quiz_path()}", "to_route": "_quiz_crm"},
+	{
+		"from_route": "/courses/<course_name>/<certificate_id>",
+		"to_route": "certificate",
+	},
+]
 
-# application home page (will override Website Settings)
-# home_page = "login"
-
-# Generators
-# ----------
-
-# automatically create page for each record of this doctype
-# website_generators = ["Web Page"]
-
-# DocType Class
-# ---------------
-
-# Override standard doctype classes
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
-
-# Document Events
-# ---------------
-
-# Hook on document methods and events
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
-
-# Scheduled Tasks
-# ---------------
-
-# scheduler_events = {
-# 	"all": [
-# 		"quiz_crm.tasks.all"
-# 	],
-# }
-
-# Fixtures
-# ----------
-
-# fixtures = []
+website_redirects = [
+	{"source": "_quiz_crm", "target": f"/{get_quiz_path()}"},
+]
