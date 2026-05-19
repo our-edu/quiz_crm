@@ -42,7 +42,7 @@
 							class="w-[90%] lg:w-[75%] mx-auto mt-5"
 						>
 							<Discussions
-								doctype="LMS Batch"
+								doctype="Batch"
 								:docname="batch.data.name"
 								:title="__('Discussions')"
 								:key="batch.data.name"

@@ -97,7 +97,7 @@ const jobApplication = createResource({
 	makeParams(values) {
 		return {
 			doc: {
-				doctype: 'LMS Job Application',
+				doctype: 'Job Application',
 				user: user.data?.name,
 				resume: resume.value?.file_url,
 				job: props.job,

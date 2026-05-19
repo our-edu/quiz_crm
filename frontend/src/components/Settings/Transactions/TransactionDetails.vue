@@ -20,7 +20,7 @@
 				>
 					{{ __('Open the ') }}
 					{{
-						transactionData.payment_for_document_type == 'LMS Course'
+						transactionData.payment_for_document_type == 'Course'
 							? __('Course')
 							: __('Batch')
 					}}
@@ -67,7 +67,7 @@
 				<Link
 					:label="__('Source')"
 					v-model="transactionData.source"
-					doctype="LMS Source"
+					doctype="Source"
 					:required="!!fieldMeta.source?.reqd"
 				/>
 				<FormControl
@@ -239,9 +239,9 @@ const openDetails = () => {
 	const docName = transactionData.value?.payment_for_document
 	if (docType && docName) {
 		router.push({
-			name: docType == 'LMS Course' ? 'CourseDetail' : 'BatchDetail',
+			name: docType == 'Course' ? 'CourseDetail' : 'BatchDetail',
 			params: {
-				[docType == 'LMS Course' ? 'courseName' : 'batchName']: docName,
+				[docType == 'Course' ? 'courseName' : 'batchName']: docName,
 			},
 		})
 		show.value = false
@@ -286,11 +286,11 @@ const documentTypeOptions = computed(() => {
 	return [
 		{
 			label: __('Course'),
-			value: 'LMS Course',
+			value: 'Course',
 		},
 		{
 			label: __('Batch'),
-			value: 'LMS Batch',
+			value: 'Batch',
 		},
 	]
 })

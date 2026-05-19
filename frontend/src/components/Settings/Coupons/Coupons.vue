@@ -36,7 +36,7 @@ const updateStep = (newStep: 'list' | 'new' | 'edit', newData: Coupon) => {
 }
 
 const coupons = createListResource({
-	doctype: 'LMS Coupon',
+	doctype: 'Coupon',
 	fields: [
 		'name',
 		'code',

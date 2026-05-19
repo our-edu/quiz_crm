@@ -135,7 +135,7 @@ const confirmDeletion = (selections: any[], unselectAll: () => void) => {
 				variant: 'solid',
 				onClick({ close }: { close: () => void }) {
 					call('quiz_crm.quiz_crm.api.delete_documents', {
-						doctype: 'LMS Coupon',
+						doctype: 'Coupon',
 						documents: Array.from(selections),
 					}).then((data: any) => {
 						toast.success(__('Coupon(s) deleted successfully'))
@@ -150,7 +150,7 @@ const confirmDeletion = (selections: any[], unselectAll: () => void) => {
 }
 
 function trashCoupon(name, close) {
-	call('frappe.client.delete', { doctype: 'LMS Coupon', name }).then(() => {
+	call('frappe.client.delete', { doctype: 'Coupon', name }).then(() => {
 		toast.success(__('Coupon deleted successfully'))
 		coupons.reload()
 		if (typeof close === 'function') close()

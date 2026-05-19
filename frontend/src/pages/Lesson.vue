@@ -544,7 +544,7 @@ const progress = createResource({
 })
 
 const notes = createListResource({
-	doctype: 'LMS Lesson Note',
+	doctype: 'Lesson Note',
 	filters: {
 		lesson: lesson.data?.name,
 		member: user.data?.name,
@@ -816,7 +816,7 @@ const enrollment = createResource({
 	makeParams() {
 		return {
 			doc: {
-				doctype: 'LMS Enrollment',
+				doctype: 'Enrollment',
 				course: props.courseName,
 				member: user.data?.name,
 			},

@@ -71,7 +71,7 @@
 				>
 					<iframe
 						v-if="
-							log.document_type == 'LMS Course' &&
+							log.document_type == 'Course' &&
 							log.document_details.video_link
 						"
 						:src="`https://www.youtube.com/embed/${log.document_details.video_link}`"
@@ -79,7 +79,7 @@
 					/>
 					<video
 						v-else-if="
-							log.document_type == 'LMS Batch' &&
+							log.document_type == 'Batch' &&
 							log.document_details.video_link
 						"
 						:src="log.document_details.video_link"
@@ -90,7 +90,7 @@
 							class="bg-surface-violet-1 w-fit py-1 px-1.5 rounded-full text-ink-violet-1 text-sm mb-2"
 						>
 							{{
-								log.document_type === 'LMS Course'
+								log.document_type === 'Course'
 									? __('New Course')
 									: __('New Batch')
 							}}
@@ -292,7 +292,7 @@ const isMentionOrComment = (log) => {
 
 const showDetails = (log) => {
 	return (
-		['LMS Course', 'LMS Batch'].includes(log.document_type) &&
+		['Course', 'Batch'].includes(log.document_type) &&
 		log.document_details
 	)
 }

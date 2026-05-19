@@ -114,7 +114,7 @@ onMounted(() => {
 })
 
 const feedbackList = createListResource({
-	doctype: 'LMS Batch Feedback',
+	doctype: 'Batch Feedback',
 	filters: {
 		batch: props.batch,
 	},

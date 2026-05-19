@@ -161,7 +161,7 @@ const studentDetails = createResource({
 const redirectToAssessment = (row: any) => {
 	console.log(row)
 	if (!row.submission) return
-	if (row.type == 'LMS Assignment') {
+	if (row.type == 'Assignment') {
 		router.push({
 			name: 'AssignmentSubmission',
 			params: {
@@ -169,7 +169,7 @@ const redirectToAssessment = (row: any) => {
 				submissionName: row.submission,
 			},
 		})
-	} else if (row.type == 'LMS Programming Exercise') {
+	} else if (row.type == 'Programming Exercise') {
 		router.push({
 			name: 'ProgrammingExerciseSubmission',
 			params: {
@@ -177,7 +177,7 @@ const redirectToAssessment = (row: any) => {
 				submissionID: row.submission,
 			},
 		})
-	} else if (row.type == 'LMS Quiz') {
+	} else if (row.type == 'Quiz') {
 		router.push({
 			name: 'QuizSubmission',
 			params: {

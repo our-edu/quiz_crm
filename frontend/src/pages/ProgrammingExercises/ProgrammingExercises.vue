@@ -187,7 +187,7 @@ const validatePermissions = () => {
 
 const getExerciseCount = (filters: any = {}) => {
 	call('frappe.client.get_count', {
-		doctype: 'LMS Programming Exercise',
+		doctype: 'Programming Exercise',
 		filters: filters,
 	})
 		.then((count: number) => {
@@ -199,7 +199,7 @@ const getExerciseCount = (filters: any = {}) => {
 }
 
 const exercises = createListResource({
-	doctype: 'LMS Programming Exercise',
+	doctype: 'Programming Exercise',
 	cache: ['programmingExercises'],
 	fields: ['name', 'title', 'language', 'problem_statement', 'modified'],
 	auto: true,

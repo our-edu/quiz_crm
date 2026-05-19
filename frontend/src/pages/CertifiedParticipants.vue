@@ -160,7 +160,7 @@ onMounted(() => {
 })
 
 const participants = createListResource({
-	doctype: 'LMS Certificate',
+	doctype: 'Certificate',
 	url: 'quiz_crm.quiz_crm.api.get_certified_participants',
 	start: 0,
 	cache: ['certified_participants'],
@@ -176,7 +176,7 @@ const getMemberCount = () => {
 }
 
 const categories = createListResource({
-	doctype: 'LMS Certificate',
+	doctype: 'Certificate',
 	url: 'quiz_crm.quiz_crm.api.get_certification_categories',
 	cache: ['certification_categories'],
 	auto: user.data ? true : false,

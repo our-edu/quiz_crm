@@ -149,7 +149,7 @@ const createLiveClass = createResource({
 	url: 'quiz_crm.quiz_crm.doctype.batch.batch.create_live_class',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Live Class',
+			doctype: 'Live Class',
 			batch_name: values.batch,
 			zoom_account: props.zoomAccount,
 			...values,

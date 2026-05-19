@@ -126,7 +126,7 @@ const props = defineProps<{
 }>()
 
 const zoomAccounts = createListResource({
-	doctype: 'LMS Zoom Settings',
+	doctype: 'Zoom Settings',
 	fields: [
 		'name',
 		'enabled',

@@ -162,7 +162,7 @@ const setFiltersFromQuery = () => {
 }
 
 const courses = createListResource({
-	doctype: 'LMS Course',
+	doctype: 'Course',
 	url: 'quiz_crm.quiz_crm.utils.get_courses',
 	cache: ['courses', user.data?.name],
 	pageLength: pageLength.value,
@@ -183,7 +183,7 @@ const getCourseCount = () => {
 	if (!user.data) return
 	if (!user.data.is_moderator) return
 	call('frappe.client.get_count', {
-		doctype: 'LMS Course',
+		doctype: 'Course',
 	}).then((data) => {
 		courseCount.value = data
 	})
@@ -355,7 +355,7 @@ const courseMenu = computed(() => {
 			onClick() {
 				router.push({
 					name: 'NewDataImport',
-					params: { doctype: 'LMS Course' },
+					params: { doctype: 'Course' },
 				})
 			},
 		},

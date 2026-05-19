@@ -17,7 +17,7 @@
 					/>
 					<Link
 						v-model="course.category"
-						doctype="LMS Category"
+						doctype="Category"
 						:label="__('Category')"
 						:inlineCreate="true"
 						:onCreate="createCategory"

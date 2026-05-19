@@ -26,16 +26,16 @@ onMounted(() => {
 })
 
 const doctypeMap = {
-	'LMS Course': {
+	'Course': {
 		title: 'Courses',
 		listRoute: '/courses',
 		pageRoute: `/courses/docname`,
 	},
-	'LMS Batch': {
+	'Batch': {
 		title: 'Batches',
 		listRoute: '/batches',
 	},
-	'LMS Category': {
+	'Category': {
 		title: 'Categories',
 		listRoute: '/quiz',
 	},

@@ -156,7 +156,7 @@
 								:required="!!fieldMeta.phone?.reqd"
 							/>
 							<Link
-								doctype="LMS Source"
+								doctype="Source"
 								:value="billingDetails.source"
 								@change="(option) => (billingDetails.source = option)"
 								:label="__('Where did you hear about us?')"
@@ -287,7 +287,7 @@ const orderSummary = createResource({
 	url: 'quiz_crm.quiz_crm.utils.get_order_summary',
 	makeParams(values) {
 		return {
-			doctype: props.type == 'batch' ? 'LMS Batch' : 'LMS Course',
+			doctype: props.type == 'batch' ? 'Batch' : 'Course',
 			docname: props.name,
 			country: billingDetails.country,
 			coupon: appliedCoupon.value,
@@ -324,7 +324,7 @@ const paymentLink = createResource({
 	url: 'quiz_crm.quiz_crm.payments.get_payment_link',
 	makeParams(values) {
 		let data = {
-			doctype: props.type == 'batch' ? 'LMS Batch' : 'LMS Course',
+			doctype: props.type == 'batch' ? 'Batch' : 'Course',
 			docname: props.name,
 			title: orderSummary.data.title,
 			amount: orderSummary.data.original_amount,

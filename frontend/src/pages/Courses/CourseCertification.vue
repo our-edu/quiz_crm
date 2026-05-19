@@ -64,7 +64,7 @@ onMounted(() => {
 const certificate = createResource({
 	url: 'frappe.client.get_value',
 	params: {
-		doctype: 'LMS Certificate',
+		doctype: 'Certificate',
 		filters: {
 			member: user.data?.name,
 			course: props.courseName,
@@ -76,7 +76,7 @@ const certificate = createResource({
 
 const fetchEnrollmentDetails = () => {
 	call('frappe.client.get_value', {
-		doctype: 'LMS Enrollment',
+		doctype: 'Enrollment',
 		filters: { member: user.data?.name, course: props.courseName },
 		fieldname: ['purchased_certificate'],
 	}).then((data) => {
@@ -93,7 +93,7 @@ const fetchEnrollmentDetails = () => {
 
 const fetchCourseDetails = () => {
 	call('frappe.client.get_value', {
-		doctype: 'LMS Course',
+		doctype: 'Course',
 		filters: { name: props.courseName },
 		fieldname: ['title', 'evaluator'],
 	}).then((data) => {

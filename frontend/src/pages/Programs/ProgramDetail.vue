@@ -87,12 +87,12 @@ onMounted(() => {
 
 const checkIfEnrolled = () => {
 	call('frappe.client.get_value', {
-		doctype: 'LMS Program Member',
+		doctype: 'Program Member',
 		filters: {
 			member: user.data.name,
 			parent: props.programName,
 		},
-		parent: 'LMS Program',
+		parent: 'Program',
 		fieldname: 'name',
 	}).then((data: { name: string }) => {
 		if (data.name) {

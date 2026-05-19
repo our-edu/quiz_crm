@@ -410,7 +410,7 @@ const openPageModal = (link) => {
 
 const deletePage = (link) => {
 	call('quiz_crm.quiz_crm.api.delete_documents', {
-		doctype: 'LMS Sidebar Item',
+		doctype: 'Sidebar Item',
 		documents: [link.name],
 	}).then(() => {
 		sidebarSettings.reload()

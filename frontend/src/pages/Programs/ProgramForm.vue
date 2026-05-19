@@ -192,7 +192,7 @@
 						<Link
 							v-if="currentForm == 'course'"
 							v-model="course"
-							doctype="LMS Course"
+							doctype="Course"
 							:label="__('Course')"
 						/>
 
@@ -321,10 +321,10 @@ const setProgramData = () => {
 }
 
 const programCourses = createListResource({
-	doctype: 'LMS Program Course',
+	doctype: 'Program Course',
 	fields: ['course', 'course_title', 'name', 'idx'],
 	cache: ['programCourses', props.programName],
-	parent: 'LMS Program',
+	parent: 'Program',
 	orderBy: 'idx',
 	onSuccess(data: ProgramCourse[]) {
 		program.value.program_courses = data
@@ -332,10 +332,10 @@ const programCourses = createListResource({
 })
 
 const programMembers = createListResource({
-	doctype: 'LMS Program Member',
+	doctype: 'Program Member',
 	fields: ['member', 'full_name', 'progress', 'name'],
 	cache: ['programMembers', props.programName],
-	parent: 'LMS Program',
+	parent: 'Program',
 	orderBy: 'creation desc',
 	onSuccess(data: ProgramMember[]) {
 		program.value.program_members = data
@@ -346,7 +346,7 @@ const fetchCourses = () => {
 	programCourses.update({
 		filters: {
 			parent: props.programName,
-			parenttype: 'LMS Program',
+			parenttype: 'Program',
 			parentfield: 'program_courses',
 		},
 	})
@@ -357,7 +357,7 @@ const fetchMembers = () => {
 	programMembers.update({
 		filters: {
 			parent: props.programName,
-			parenttype: 'LMS Program',
+			parenttype: 'Program',
 			parentfield: 'program_members',
 		},
 	})

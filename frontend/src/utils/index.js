@@ -829,7 +829,7 @@ const extractYouTubeId = (url) => {
 export const createLMSCategory = (name) => {
 	return call('frappe.client.insert', {
 		doc: {
-			doctype: 'LMS Category',
+			doctype: 'Category',
 			category: name,
 		},
 	})

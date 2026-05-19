@@ -19,7 +19,7 @@
 							/>
 							<Link
 								v-model="courseResource.doc.category"
-								doctype="LMS Category"
+								doctype="Category"
 								:label="__('Category')"
 								:inlineCreate="true"
 								:onCreate="createCategory"
@@ -202,7 +202,7 @@
 
 						<MultiSelect
 							v-model="related_courses"
-							doctype="LMS Course"
+							doctype="Course"
 							:label="__('Related Courses')"
 							:filters="{ name: ['!=', courseResource.doc?.name] }"
 							:onCreate="
@@ -408,7 +408,7 @@ onMounted(() => {
 })
 
 const courseResource = createDocumentResource({
-	doctype: 'LMS Course',
+	doctype: 'Course',
 	name: props.course.data?.name,
 	auto: true,
 })

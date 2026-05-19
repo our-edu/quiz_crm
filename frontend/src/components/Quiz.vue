@@ -528,7 +528,7 @@ const quiz = createResource({
 	url: 'frappe.client.get',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Quiz',
+			doctype: 'Quiz',
 			name: props.quizName,
 		}
 	},
@@ -598,7 +598,7 @@ const attempts = createResource({
 	url: 'frappe.client.get_list',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Quiz Submission',
+			doctype: 'Quiz Submission',
 			filters: {
 				member: user.data?.name,
 				quiz: quiz.data?.name,

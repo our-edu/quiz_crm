@@ -53,7 +53,7 @@ const fieldMeta = createResource({
 })
 
 const transactions = createListResource({
-	doctype: 'LMS Payment',
+	doctype: 'Payment',
 	fields: [
 		'name',
 		'member',

@@ -186,9 +186,9 @@ const setExerciseData = () => {
 }
 
 const testCases = createListResource({
-	doctype: 'LMS Test Case',
+	doctype: 'Test Case',
 	fields: ['input', 'expected_output', 'name'],
-	parent: 'LMS Programming Exercise',
+	parent: 'Programming Exercise',
 	orderBy: 'idx',
 	onSuccess(data: TestCase[]) {
 		isDirty.value = false
@@ -204,7 +204,7 @@ const fetchTestCases = () => {
 	testCases.update({
 		filters: {
 			parent: props.exerciseID,
-			parenttype: 'LMS Programming Exercise',
+			parenttype: 'Programming Exercise',
 			parentfield: 'test_cases',
 		},
 	})

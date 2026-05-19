@@ -213,14 +213,14 @@ const certificationCount = createResource({
 	url: 'frappe.client.get_count',
 	cache: ['batch_certificate_count', props.batch?.data?.name],
 	params: {
-		doctype: 'LMS Certificate',
+		doctype: 'Certificate',
 		filters: { batch_name: props.batch?.data?.name },
 	},
 	auto: true,
 })
 
 const students = createListResource({
-	doctype: 'LMS Batch Enrollment',
+	doctype: 'Batch Enrollment',
 	filters: {
 		batch: props.batch?.data?.name,
 	},

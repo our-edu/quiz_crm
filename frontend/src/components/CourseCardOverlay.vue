@@ -189,7 +189,7 @@ function enrollStudent() {
 	} else {
 		call('frappe.client.insert', {
 			doc: {
-				doctype: 'LMS Enrollment',
+				doctype: 'Enrollment',
 				course: props.course.data.name,
 				member: user.data.name,
 			},

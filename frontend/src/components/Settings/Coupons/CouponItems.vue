@@ -23,8 +23,8 @@
 								type="select"
 								v-model="row.reference_doctype"
 								:options="[
-									{ label: 'Course', value: 'LMS Course' },
-									{ label: 'Batch', value: 'LMS Batch' },
+									{ label: 'Course', value: 'Course' },
+									{ label: 'Batch', value: 'Batch' },
 								]"
 							/>
 						</td>
@@ -78,7 +78,7 @@ const props = defineProps<{
 }>()
 
 const applicableItems = createListResource({
-	doctype: 'LMS Coupon Item',
+	doctype: 'Coupon Item',
 	fields: [
 		'reference_doctype',
 		'reference_name',
@@ -87,7 +87,7 @@ const applicableItems = createListResource({
 		'parenttype',
 		'parentfield',
 	],
-	parent: 'LMS Coupon',
+	parent: 'Coupon',
 	onSuccess(data: ApplicableItem[]) {
 		rows.value = data
 	},
@@ -95,7 +95,7 @@ const applicableItems = createListResource({
 
 const addRow = () => {
 	rows.value.push({
-		reference_doctype: 'LMS Course',
+		reference_doctype: 'Course',
 		reference_name: null,
 		name: null,
 	})

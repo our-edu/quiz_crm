@@ -199,7 +199,7 @@ const jobApplication = createResource({
 	url: 'frappe.client.get_list',
 	makeParams() {
 		return {
-			doctype: 'LMS Job Application',
+			doctype: 'Job Application',
 			filters: {
 				job: job.data?.name,
 				user: user.data?.name,
@@ -212,7 +212,7 @@ const applicationCount = createResource({
 	url: 'frappe.client.get_count',
 	makeParams() {
 		return {
-			doctype: 'LMS Job Application',
+			doctype: 'Job Application',
 			filters: {
 				job: job.data?.name,
 			},

@@ -1346,7 +1346,7 @@ def update_document_details(notification: dict) -> dict:
 
 
 @frappe.whitelist(allow_guest=True)
-def get_quiz_settings():
+def get_settings():
 	allowed_fields = [
 		"allow_guest_access",
 		"prevent_skipping_videos",

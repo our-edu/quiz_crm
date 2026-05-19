@@ -86,7 +86,7 @@ const chapter = createDocumentResource({
 })
 
 const enrollment = createListResource({
-	doctype: 'LMS Enrollment',
+	doctype: 'Enrollment',
 	fields: ['member', 'course'],
 	filters: {
 		course: props.courseName,
@@ -161,7 +161,7 @@ const progress = createResource({
 	url: 'frappe.client.get_value',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Course Progress',
+			doctype: 'Course Progress',
 			fieldname: ['status', 'scorm_content'],
 			filters: {
 				member: user.data?.name,

@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
 const assignment = createResource({
 	url: 'frappe.client.get',
 	params: {
-		doctype: 'LMS Assignment',
+		doctype: 'Assignment',
 		name: props.assignmentID,
 	},
 	auto: true,
@@ -271,7 +271,7 @@ const assignment = createResource({
 })
 
 const submissionResource = createDocumentResource({
-	doctype: 'LMS Assignment Submission',
+	doctype: 'Assignment Submission',
 	name: props.submissionName,
 	auto: false,
 	onError(err) {
@@ -302,7 +302,7 @@ const submitAssignment = () => {
 
 const addNewSubmission = () => {
 	let doc = {
-		doctype: 'LMS Assignment Submission',
+		doctype: 'Assignment Submission',
 		assignment: props.assignmentID,
 		member: user.data?.name,
 	}

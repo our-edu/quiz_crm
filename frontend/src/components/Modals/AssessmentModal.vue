@@ -32,14 +32,14 @@
 					:onCreate="
 						(value, close) => {
 							close()
-							if (assessmentType === 'LMS Quiz') {
+							if (assessmentType === 'Quiz') {
 								router.push({
 									name: 'QuizForm',
 									params: {
 										quizID: 'new',
 									},
 								})
-							} else if (assessmentType === 'LMS Assignment') {
+							} else if (assessmentType === 'Assignment') {
 								router.push({
 									name: 'Assignments',
 								})
@@ -75,9 +75,9 @@ const assessmentResource = createResource({
 	makeParams(values) {
 		return {
 			doc: {
-				doctype: 'LMS Assessment',
+				doctype: 'Assessment',
 				parent: props.batch,
-				parenttype: 'LMS Batch',
+				parenttype: 'Batch',
 				parentfield: 'assessment',
 				assessment_type: assessmentType.value,
 				assessment_name: assessment.value,
@@ -101,9 +101,9 @@ const addAssessment = (close) => {
 
 const assessmentTypes = computed(() => {
 	return [
-		{ label: 'Quiz', value: 'LMS Quiz' },
-		{ label: 'Assignment', value: 'LMS Assignment' },
-		{ label: 'Programming Exercise', value: 'LMS Programming Exercise' },
+		{ label: 'Quiz', value: 'Quiz' },
+		{ label: 'Assignment', value: 'Assignment' },
+		{ label: 'Programming Exercise', value: 'Programming Exercise' },
 	]
 })
 </script>

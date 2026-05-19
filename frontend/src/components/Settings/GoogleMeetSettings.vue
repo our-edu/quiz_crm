@@ -128,7 +128,7 @@ const props = defineProps({
 })
 
 const googleMeetAccounts = createListResource({
-	doctype: 'LMS Google Meet Settings',
+	doctype: 'Google Meet Settings',
 	fields: [
 		'name',
 		'enabled',
@@ -164,7 +164,7 @@ const openForm = (accountID: string) => {
 
 const removeAccount = (selections, unselectAll) => {
 	call('quiz_crm.quiz_crm.api.delete_documents', {
-		doctype: 'LMS Google Meet Settings',
+		doctype: 'Google Meet Settings',
 		documents: Array.from(selections),
 	})
 		.then(() => {

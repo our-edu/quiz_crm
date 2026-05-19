@@ -167,7 +167,7 @@ const updateAccount = async (close: () => void) => {
 
 const renameDoc = async () => {
 	await call('frappe.client.rename_doc', {
-		doctype: 'LMS Google Meet Settings',
+		doctype: 'Google Meet Settings',
 		old_name: props.accountID,
 		new_name: account.name,
 	})

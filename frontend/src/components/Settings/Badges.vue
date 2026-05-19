@@ -132,7 +132,7 @@ const props = defineProps<{
 }>()
 
 const badges = createListResource({
-	doctype: 'LMS Badge',
+	doctype: 'Badge',
 	fields: [
 		'name',
 		'title',
@@ -196,13 +196,13 @@ const deleteBadge = (badgeName: string) => {
 
 const doctypeLabel = computed(() => {
 	return {
-		'LMS Course': __('Course'),
-		'LMS Batch': __('Batch'),
-		'LMS Enrollment': __('Course Enrollment'),
-		'LMS Batch Enrollment': __('Batch Enrollment'),
-		'LMS Quiz Submission': __('Quiz Submission'),
-		'LMS Assignment Submission': __('Assignment Submission'),
-		'LMS Programming Exercise Submission': __(
+		'Course': __('Course'),
+		'Batch': __('Batch'),
+		'Enrollment': __('Course Enrollment'),
+		'Batch Enrollment': __('Batch Enrollment'),
+		'Quiz Submission': __('Quiz Submission'),
+		'Assignment Submission': __('Assignment Submission'),
+		'Programming Exercise Submission': __(
 			'Programming Exercise Submission'
 		),
 	}

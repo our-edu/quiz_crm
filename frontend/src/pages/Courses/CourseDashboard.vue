@@ -313,7 +313,7 @@ const chartDetails = createResource({
 })
 
 const progressList = createListResource({
-	doctype: 'LMS Enrollment',
+	doctype: 'Enrollment',
 	filters: {
 		course: props.course.data?.name,
 	},

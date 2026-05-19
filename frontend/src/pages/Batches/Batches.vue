@@ -19,7 +19,7 @@
 					onClick() {
 						router.push({
 							name: 'NewDataImport',
-							params: { doctype: 'LMS Batch' },
+							params: { doctype: 'Batch' },
 						})
 					},
 				},
@@ -172,7 +172,7 @@ const setFiltersFromQuery = () => {
 }
 
 const batches = createListResource({
-	doctype: 'LMS Batch',
+	doctype: 'Batch',
 	url: 'quiz_crm.quiz_crm.utils.get_batches',
 	cache: ['batches', user.data?.name],
 	pageLength: pageLength.value,

@@ -140,7 +140,7 @@ const updateBadge = async (close: () => void) => {
 
 const renameDoc = async () => {
 	await call('frappe.client.rename_doc', {
-		doctype: 'LMS Badge',
+		doctype: 'Badge',
 		old_name: props.badgeName,
 		new_name: badge.value?.title,
 	})
@@ -188,17 +188,17 @@ const createBadge = (close: () => void) => {
 
 const referenceDoctypeOptions = computed(() => {
 	return [
-		{ label: __('Course'), value: 'LMS Course' },
-		{ label: __('Batch'), value: 'LMS Batch' },
+		{ label: __('Course'), value: 'Course' },
+		{ label: __('Batch'), value: 'Batch' },
 		{ label: __('User'), value: 'Member' },
-		{ label: __('Quiz Submission'), value: 'LMS Quiz Submission' },
-		{ label: __('Assignment Submission'), value: 'LMS Assignment Submission' },
+		{ label: __('Quiz Submission'), value: 'Quiz Submission' },
+		{ label: __('Assignment Submission'), value: 'Assignment Submission' },
 		{
 			label: __('Programming Exercise Submission'),
-			value: 'LMS Programming Exercise Submission',
+			value: 'Programming Exercise Submission',
 		},
-		{ label: __('Course Enrollment'), value: 'LMS Enrollment' },
-		{ label: __('Batch Enrollment'), value: 'LMS Batch Enrollment' },
+		{ label: __('Course Enrollment'), value: 'Enrollment' },
+		{ label: __('Batch Enrollment'), value: 'Batch Enrollment' },
 	]
 })
 

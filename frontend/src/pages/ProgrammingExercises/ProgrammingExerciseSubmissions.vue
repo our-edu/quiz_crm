@@ -18,7 +18,7 @@
 				class="grid grid-cols-3 gap-5"
 			>
 				<Link
-					doctype="LMS Programming Exercise"
+					doctype="Programming Exercise"
 					v-model="filters.exercise"
 					:placeholder="__('Filter by Exercise')"
 					class="w-40"
@@ -200,7 +200,7 @@ const fetchBasedOnRole = () => {
 }
 
 const submissions = createListResource({
-	doctype: 'LMS Programming Exercise Submission',
+	doctype: 'Programming Exercise Submission',
 	fields: [
 		'name',
 		'exercise',

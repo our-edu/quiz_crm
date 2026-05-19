@@ -280,7 +280,7 @@ onBeforeUnmount(() => {
 })
 
 const quizDetails = createDocumentResource({
-	doctype: 'LMS Quiz',
+	doctype: 'Quiz',
 	name: props.quizID,
 	auto: false,
 })
@@ -361,7 +361,7 @@ const deleteQuestionResource = createResource({
 	url: 'quiz_crm.quiz_crm.api.delete_documents',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Quiz Question',
+			doctype: 'Quiz Question',
 			documents: values.questions,
 		}
 	},

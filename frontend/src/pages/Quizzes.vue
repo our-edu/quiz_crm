@@ -187,7 +187,7 @@ watch(search, () => {
 })
 
 const quizzes = createListResource({
-	doctype: 'LMS Quiz',
+	doctype: 'Quiz',
 	filters: quizFilters,
 	fields: [
 		'name',
@@ -214,7 +214,7 @@ const quizzes = createListResource({
 const totalQuizzes = createResource({
 	url: 'frappe.client.get_count',
 	params: {
-		doctype: 'LMS Quiz',
+		doctype: 'Quiz',
 		filters: quizFilters.value,
 	},
 	auto: true,

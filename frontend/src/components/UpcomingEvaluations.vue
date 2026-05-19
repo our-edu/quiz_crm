@@ -149,7 +149,7 @@ const props = defineProps({
 })
 
 const upcoming_evals = createListResource({
-	doctype: 'LMS Certificate Request',
+	doctype: 'Certificate Request',
 	filters: {
 		course: props.courses?.length
 			? ['in', props.courses.map((course) => course.course)]

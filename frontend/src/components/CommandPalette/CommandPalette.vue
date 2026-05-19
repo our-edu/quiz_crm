@@ -110,9 +110,9 @@ const generateSearchResults = () => {
 		let result: { title: string; items: any[] } = { title: '', items: [] }
 		result.title = type.title
 		type.items.forEach((item: any) => {
-			let paramName = item.doctype === 'LMS Course' ? 'courseName' : 'batchName'
+			let paramName = item.doctype === 'Course' ? 'courseName' : 'batchName'
 			item.route = {
-				name: item.doctype === 'LMS Course' ? 'CourseDetail' : 'BatchDetail',
+				name: item.doctype === 'Course' ? 'CourseDetail' : 'BatchDetail',
 				params: {
 					[paramName]: item.name,
 				},

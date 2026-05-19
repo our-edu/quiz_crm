@@ -10,7 +10,7 @@ export const useSettings = defineStore('settings', () => {
 	const settings = createResource({
 		url: 'quiz_crm.quiz_crm.api.get_settings',
 		auto: true,
-		cache: 'LMS Settings',
+		cache: 'Settings',
 	})
 
 	const sidebarSettings = createResource({

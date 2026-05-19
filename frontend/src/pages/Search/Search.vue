@@ -185,14 +185,14 @@ const sortResults = () => {
 }
 
 const navigate = (result: any) => {
-	if (result.doctype == 'LMS Course') {
+	if (result.doctype == 'Course') {
 		router.push({
 			name: 'CourseDetail',
 			params: {
 				courseName: result.name,
 			},
 		})
-	} else if (result.doctype == 'LMS Batch') {
+	} else if (result.doctype == 'Batch') {
 		router.push({
 			name: 'BatchDetail',
 			params: {
@@ -229,9 +229,9 @@ watch(
 )
 
 const getDocTypeTitle = (doctype: string) => {
-	if (doctype === 'LMS Course') {
+	if (doctype === 'Course') {
 		return __('Course')
-	} else if (doctype === 'LMS Batch') {
+	} else if (doctype === 'Batch') {
 		return __('Batch')
 	} else if (doctype === 'Job Opportunity') {
 		return __('Job')

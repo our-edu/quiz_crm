@@ -133,7 +133,7 @@ const deleteAssessments = createResource({
 	url: 'quiz_crm.quiz_crm.api.delete_documents',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Assessment',
+			doctype: 'Assessment',
 			documents: values.assessments,
 		}
 	},
@@ -152,7 +152,7 @@ const removeAssessments = (selections, unselectAll) => {
 }
 
 const getRowRoute = (row) => {
-	if (row.assessment_type == 'LMS Assignment') {
+	if (row.assessment_type == 'Assignment') {
 		if (row.submission) {
 			return {
 				name: 'AssignmentSubmission',
@@ -170,7 +170,7 @@ const getRowRoute = (row) => {
 				},
 			}
 		}
-	} else if (row.assessment_type == 'LMS Programming Exercise') {
+	} else if (row.assessment_type == 'Programming Exercise') {
 		if (row.submission) {
 			return {
 				name: 'ProgrammingExerciseSubmission',
@@ -238,11 +238,11 @@ const getStatusTheme = (status) => {
 }
 
 const getAssessmentTypeLabel = (type) => {
-	if (type == 'LMS Assignment') {
+	if (type == 'Assignment') {
 		return __('Assignment')
-	} else if (type == 'LMS Quiz') {
+	} else if (type == 'Quiz') {
 		return __('Quiz')
-	} else if (type == 'LMS Programming Exercise') {
+	} else if (type == 'Programming Exercise') {
 		return __('Programming Exercise')
 	}
 }

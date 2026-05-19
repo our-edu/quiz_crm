@@ -212,14 +212,14 @@ const fetchSubmission = (name: string = '') => {
 }
 
 const exercise = createDocumentResource({
-	doctype: 'LMS Programming Exercise',
+	doctype: 'Programming Exercise',
 	name: props.exerciseID,
 	cache: ['programmingExercise', props.exerciseID],
 	auto: true,
 })
 
 const submission = createDocumentResource({
-	doctype: 'LMS Programming Exercise Submission',
+	doctype: 'Programming Exercise Submission',
 	name: props.submissionID,
 	auto: false,
 	onError(error: any) {

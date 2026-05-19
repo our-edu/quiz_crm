@@ -137,7 +137,7 @@
 								doctype="Print Format"
 								:disabled="!userIsEvaluator()"
 								:filters="{
-									doc_type: 'LMS Certificate',
+									doc_type: 'Certificate',
 								}"
 							/>
 							<FormControl
@@ -226,7 +226,7 @@ const defaultTemplate = createResource({
 			doctype: 'Property Setter',
 			fieldname: 'value',
 			filters: {
-				doc_type: 'LMS Certificate',
+				doc_type: 'Certificate',
 				property: 'default_print_format',
 			},
 		}
@@ -266,7 +266,7 @@ const evaluationDetails = createResource({
 	url: 'frappe.client.get',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Certificate Evaluation',
+			doctype: 'Certificate Evaluation',
 			filters: {
 				member: props.event.member,
 				course: props.event.course,
@@ -329,7 +329,7 @@ const certificateDetails = createResource({
 	url: 'frappe.client.get',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Certificate',
+			doctype: 'Certificate',
 			filters: {
 				member: props.event.member,
 				course: props.event.course,

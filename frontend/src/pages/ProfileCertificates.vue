@@ -46,7 +46,7 @@ onMounted(() => {
 })
 
 const certificates = createListResource({
-	doctype: 'LMS Certificate',
+	doctype: 'Certificate',
 	filters: {
 		member: props.profile.data?.name,
 	},

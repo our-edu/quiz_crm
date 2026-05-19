@@ -47,7 +47,7 @@
 					/>
 					<Link
 						v-model="batch.category"
-						doctype="LMS Category"
+						doctype="Category"
 						:label="__('Category')"
 						:onCreate="createCategory"
 					/>

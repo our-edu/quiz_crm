@@ -15,7 +15,7 @@
 	>
 		<template #body-content>
 			<Link
-				doctype="LMS Course"
+				doctype="Course"
 				v-model="course"
 				:label="__('Course')"
 				:required="true"
@@ -69,7 +69,7 @@ const addCourse = (close) => {
 			course: course.value,
 			evaluator: evaluator.value,
 			parent: props.batch,
-			parenttype: 'LMS Batch',
+			parenttype: 'Batch',
 			parentfield: 'courses',
 		},
 		{

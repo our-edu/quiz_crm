@@ -120,7 +120,7 @@ const props = defineProps({
 })
 
 const submissionDetails = createDocumentResource({
-	doctype: 'LMS Quiz Submission',
+	doctype: 'Quiz Submission',
 	name: props.submission,
 	auto: true,
 })

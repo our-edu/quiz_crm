@@ -115,7 +115,7 @@ const props = defineProps({
 })
 
 const categories = createListResource({
-	doctype: 'LMS Category',
+	doctype: 'Category',
 	fields: ['name', 'category'],
 	auto: true,
 })
@@ -150,7 +150,7 @@ const updateCategory = createResource({
 	url: 'frappe.client.rename_doc',
 	makeParams(values) {
 		return {
-			doctype: 'LMS Category',
+			doctype: 'Category',
 			old_name: values.name,
 			new_name: values.category,
 		}

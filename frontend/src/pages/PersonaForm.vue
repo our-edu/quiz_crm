@@ -86,8 +86,8 @@ const submitPersona = () => {
 
 const skipPersonaForm = () => {
 	call('frappe.client.set_value', {
-		doctype: 'LMS Settings',
-		name: 'LMS Settings',
+		doctype: 'Settings',
+		name: 'Settings',
 		fieldname: 'persona_captured',
 		value: 1,
 	}).then(() => {

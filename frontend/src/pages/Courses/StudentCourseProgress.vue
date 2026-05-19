@@ -173,7 +173,7 @@ const props = defineProps<{
 }>()
 
 const lessonProgress = createListResource({
-	doctype: 'LMS Course Progress',
+	doctype: 'Course Progress',
 	filters: {
 		course: ['=', props.course.data?.name],
 		member: ['=', props.student?.member],

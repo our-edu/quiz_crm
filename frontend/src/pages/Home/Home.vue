@@ -54,7 +54,7 @@ const showStreakModal = ref(false)
 
 const fetchEvalCount = () => {
 	call('frappe.client.get_count', {
-		doctype: 'LMS Certificate Request',
+		doctype: 'Certificate Request',
 		filters: {
 			member: user?.data?.name,
 			status: 'Upcoming',
@@ -75,7 +75,7 @@ const isAdmin = computed(() => {
 
 const isPersonaCaptured = async () => {
 	let persona = await call('frappe.client.get_single_value', {
-		doctype: 'LMS Settings',
+		doctype: 'Settings',
 		field: 'persona_captured',
 	})
 	return persona
@@ -86,7 +86,7 @@ const identifyUserPersona = async () => {
 		let personaCaptured = await isPersonaCaptured()
 		if (personaCaptured) return
 		let courseCount = await call('frappe.client.get_count', {
-			doctype: 'LMS Course',
+			doctype: 'Course',
 			filters: {
 				title: ['not like', '%A guide to Frappe Learning%'],
 			},

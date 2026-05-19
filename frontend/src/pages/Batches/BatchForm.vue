@@ -77,7 +77,7 @@
 
 							<Link
 								v-model="batchDetail.doc.category"
-								doctype="LMS Category"
+								doctype="Category"
 								:label="__('Category')"
 								:inlineCreate="true"
 								:onCreate="createCategory"
@@ -197,7 +197,7 @@
 						/>
 						<Link
 							v-if="batchDetail.doc.conferencing_provider === 'Zoom'"
-							doctype="LMS Zoom Settings"
+							doctype="Zoom Settings"
 							:label="__('Zoom Account')"
 							v-model="batchDetail.doc.zoom_account"
 							:onCreate="
@@ -208,7 +208,7 @@
 						/>
 						<Link
 							v-if="batchDetail.doc.conferencing_provider === 'Google Meet'"
-							doctype="LMS Google Meet Settings"
+							doctype="Google Meet Settings"
 							:label="__('Google Meet Account')"
 							v-model="batchDetail.doc.google_meet_account"
 							:onCreate="
@@ -406,7 +406,7 @@ onBeforeUnmount(() => {
 })
 
 const batchDetail = createDocumentResource({
-	doctype: 'LMS Batch',
+	doctype: 'Batch',
 	name: props.batch.data?.name,
 	auto: true,
 })
