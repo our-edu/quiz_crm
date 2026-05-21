@@ -1,2 +1,0 @@
-import{d as r,o as i,a as n,b as s,t as a,bJ as o}from"./index-DZjvdykD.js";const l={class:"border rounded-lg p-3 space-y-2"},c={class:"text-ink-gray-5"},d={class:"flex items-center space-x-2"},_={class:"font-semibold text-ink-gray-9 text-2xl"},f=r({__name:"NumberChartGraph",props:{title:{},value:{}},setup(t){return(e,p)=>(i(),n("div",l,[s("div",c,a(e.__(t.title)),1),s("div",d,[o(e.$slots,"prefix"),s("div",_,a(t.value),1),o(e.$slots,"suffix")])]))}});export{f as _};
-//# sourceMappingURL=NumberChartGraph.vue_vue_type_script_setup_true_lang-B1MhD7Lz.js.map

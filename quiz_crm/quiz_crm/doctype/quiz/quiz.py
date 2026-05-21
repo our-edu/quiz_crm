@@ -9,7 +9,7 @@ import frappe
 from frappe import _, safe_decode
 from frappe.core.doctype.file.utils import get_random_filename
 from frappe.model.document import Document
-from frappe.utils import cint, comma_and, cstr
+from frappe.utils import cint, comma_and, cstr, flt
 from frappe.utils.file_manager import safe_b64decode
 from fuzzywuzzy import fuzz
 
@@ -144,6 +144,9 @@ def process_results(results: list, quiz_details: dict):
 	score = 0
 	is_open_ended = False
 
+	if not results:
+		return {"results": [], "score": 0, "is_open_ended": False}
+
 	for result in results:
 		question_details = frappe.db.get_value(
 			"Quiz Question",
@@ -156,15 +159,13 @@ def process_results(results: list, quiz_details: dict):
 		result["marks_out_of"] = question_details.marks
 
 		if question_details.type != "Open Ended":
-			correct = verify_answer(question_details.question, result["answer"])
+			marks_earned = calculate_weighted_marks(
+				question_details.question, result["answer"], question_details.marks
+			)
 			result["answer"] = ", ".join(result["answer"])
-			if correct:
-				result["marks"] = question_details.marks
-			else:
-				result["marks"] = -quiz_details.marks_to_cut if quiz_details.enable_negative_marking else 0
-
-			score += result["marks"]
-			result["is_correct"] = 1 if correct else 0
+			result["marks"] = marks_earned
+			score += marks_earned
+			result["is_correct"] = 1 if marks_earned > 0 else 0
 
 		else:
 			is_open_ended = True
@@ -198,6 +199,25 @@ def verify_answer(question: str, answer: list):
 		if question_details[f"option_{num}"] in answer:
 			correct = question_details[f"is_correct_{num}"]
 	return correct
+
+
+def calculate_weighted_marks(question_name: str, selected_answers: list, max_marks) -> float:
+	fields = ["weight_type"]
+	for num in range(1, 5):
+		fields.append(f"option_{cstr(num)}")
+		fields.append(f"weight_{cstr(num)}")
+	question_details = frappe.db.get_value("Question", question_name, fields, as_dict=1)
+	weight_type = question_details.get("weight_type") or "Percentage"
+	earned = 0.0
+	for num in range(1, 5):
+		option_text = question_details.get(f"option_{num}")
+		weight = flt(question_details.get(f"weight_{num}") or 0)
+		if option_text and option_text in selected_answers:
+			if weight_type == "Points":
+				earned += weight
+			else:
+				earned += (weight / 100.0) * flt(max_marks)
+	return earned
 
 
 def _save_file(match: re.Match) -> str:
@@ -284,7 +304,6 @@ def get_question_details(question: str):
 	fields = ["multiple"]
 	for num in range(1, 5):
 		fields.append(f"option_{cstr(num)}")
-		fields.append(f"is_correct_{cstr(num)}")
 
 	question_details = frappe.db.get_value("Question", question, fields, as_dict=1)
 	return question_details

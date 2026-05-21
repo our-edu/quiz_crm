@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 from frappe.model.document import Document
 
 from quiz_crm.quiz_crm.utils import has_course_instructor_role, has_moderator_role
@@ -18,7 +19,7 @@ def validate_correct_answers(question):
 	if question.type == "Choices":
 		validate_duplicate_options(question)
 		validate_minimum_options(question)
-		validate_correct_options(question)
+		validate_weights(question)
 	elif question.type == "User Input":
 		validate_possible_answer(question)
 
@@ -34,16 +35,16 @@ def validate_duplicate_options(question):
 		frappe.throw(_("Duplicate options found for this question."))
 
 
-def validate_correct_options(question):
-	correct_options = get_correct_options(question)
+def validate_weights(question):
+	weight_type = question.get("weight_type") or "Percentage"
+	marks = flt(question.get("marks") or 0)
 
-	if len(correct_options) > 1:
-		question.multiple = 1
-	else:
-		question.multiple = 0
-
-	if not len(correct_options):
-		frappe.throw(_("At least one option must be correct for this question."))
+	for n in range(1, 5):
+		w = flt(question.get(f"weight_{n}") or 0)
+		if w < 0:
+			frappe.throw(_("Weight for Option {0} cannot be negative.").format(n))
+		if weight_type == "Percentage" and w > 100:
+			frappe.throw(_("Weight for Option {0} must be between 0 and 100%.").format(n))
 
 
 def validate_minimum_options(question):
@@ -80,16 +81,4 @@ def update_question_title(question):
 			frappe.db.set_value("Quiz Question", row, "question_detail", question.question)
 
 
-def get_correct_options(question):
-	correct_options = []
-	correct_option_fields = [
-		"is_correct_1",
-		"is_correct_2",
-		"is_correct_3",
-		"is_correct_4",
-	]
-	for field in correct_option_fields:
-		if question.get(field) == 1:
-			correct_options.append(field)
 
-	return correct_options

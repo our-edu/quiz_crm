@@ -7,7 +7,7 @@
     "dev": "vite",
     "serve": "vite preview",
     "build": "vite build --base=/assets/quiz_crm/frontend/ && yarn copy-html-entry && yarn copy-colors-json",
-    "copy-html-entry": "cp ../quiz_crm/public/frontend/index.html ../quiz_crm/quiz_crm/www/_quiz_crm.html",
+    "copy-html-entry": "cp ../quiz_crm/public/frontend/index.html ../quiz_crm/quiz_crm/www/_quiz_crm.html && cp ../quiz_crm/public/frontend/index.html ../../quiz_crm/quiz_crm/www/_quiz_crm.html",
     "copy-colors-json": "cp node_modules/frappe-ui/tailwind/colors.json src/utils/frappe-ui-colors.json"
   },
   "dependencies": {

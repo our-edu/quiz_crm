@@ -228,10 +228,7 @@
 							:model-value="reviewQuestions.includes(activeQuestion) ? 1 : 0"
 							@change="markForReview($event, activeQuestion)"
 						/>
-						<div
-							v-if="!quiz.data.show_answers"
-							class="flex items-center space-x-2"
-						>
+						<div class="flex items-center space-x-2">
 							<Button
 								@click="switchQuestion(activeQuestion - 1)"
 								:disabled="activeQuestion == 1"
@@ -272,29 +269,7 @@
 								</template>
 							</Button>
 						</div>
-						<Button
-							v-if="
-								quiz.data.show_answers &&
-								!showAnswers.length &&
-								questionDetails.data.type != 'Open Ended'
-							"
-							@click="checkAnswer()"
-						>
-							<span>
-								{{ __('Check') }}
-							</span>
-						</Button>
-						<Button
-							v-else-if="
-								activeQuestion != questions.length && quiz.data.show_answers
-							"
-							@click="nextQuestion()"
-						>
-							<span>
-								{{ __('Next') }}
-							</span>
-						</Button>
-						<Button variant="solid" v-else @click="handleSubmitClick()">
+						<Button variant="solid" v-if="activeQuestion == questions.length" @click="handleSubmitClick()">
 							<span>
 								{{ __('Submit') }}
 							</span>
@@ -823,14 +798,10 @@ const resetQuestion = () => {
 }
 
 const submitQuiz = () => {
-	if (!quiz.data.show_answers) {
-		if (questionDetails.data.type == 'Open Ended') addToLocalStorage()
-		setTimeout(() => {
-			createSubmission()
-		}, 500)
-		return
-	}
-	createSubmission()
+	if (questionDetails.data?.type == 'Open Ended') addToLocalStorage()
+	setTimeout(() => {
+		createSubmission()
+	}, 100)
 }
 
 const createSubmission = () => {
@@ -843,13 +814,16 @@ const createSubmission = () => {
 				if (quiz.data.duration) clearInterval(timerInterval)
 			},
 			onError(err) {
-				const errorTitle = err?.message || ''
+				const errorTitle = err?.message || err?.exc_type || ''
 				if (errorTitle.includes('MaximumAttemptsExceededError')) {
 					const errorMessage = err.messages?.[0] || err
 					toast.error(__(errorMessage))
 					setTimeout(() => {
 						window.location.reload()
 					}, 3000)
+				} else {
+					const msg = err?.messages?.[0] || err?.message || __('Submission failed. Please try again.')
+					toast.error(msg)
 				}
 			},
 		}
@@ -891,8 +865,13 @@ const markLessonProgress = () => {
 }
 
 const handleSubmitClick = () => {
-	if (attemptedQuestions.value.length) {
-		switchQuestion(activeQuestion.value)
+	// Always save the current question's answer before showing confirmation
+	let answers = getAnswers()
+	if (answers.length) {
+		if (!attemptedQuestions.value.includes(activeQuestion.value)) {
+			attemptedQuestions.value.push(activeQuestion.value)
+		}
+		addToLocalStorage()
 	}
 	showSubmissionConfirmation.value = true
 }

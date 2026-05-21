@@ -45,6 +45,20 @@
 							class="pb-2"
 							:required="true"
 						/>
+						<Switch
+							v-if="question.type === 'Choices'"
+							size="sm"
+							:label="__('Allow Multiple Selections')"
+							:description="__('Let users select more than one option.')"
+							v-model="question.multiple"
+						/>
+						<FormControl
+							v-if="question.type === 'Choices'"
+							:label="__('Weight Entry Mode')"
+							v-model="question.weight_type"
+							type="select"
+							:options="[{ label: __('Percentage (0–100%)'), value: 'Percentage' }, { label: __('Points (up to question marks)'), value: 'Points' }]"
+						/>
 					</div>
 					<div
 						v-if="question.type == 'Choices'"
@@ -72,11 +86,12 @@
 								:label="__('Explanation')"
 								v-model="question[`explanation_${n}`]"
 							/>
-							<Switch
-								size="sm"
-								:label="__('Correct Answer')"
-								:description="__('Mark this option as a correct answer.')"
-								v-model="question[`is_correct_${n}`]"
+							<FormControl
+								:label="question.weight_type === 'Points' ? __('Points (max: ') + (question.marks || 1) + ')' : __('Weight (%)')"
+								v-model="question[`weight_${n}`]"
+								type="number"
+								:min="0"
+								:max="question.weight_type === 'Points' ? (question.marks || 1) : 100"
 							/>
 						</div>
 					</div>
@@ -133,7 +148,7 @@ const quiz = defineModel('quiz')
 const chooseFromExisting = ref(false)
 const editMode = ref(false)
 const user = inject('$user')
-const { updateOnboardingStep } = useOnboarding('learning')
+const { updateOnboardingStep } = useOnboarding('learning') || { updateOnboardingStep: () => {} }
 
 const existingQuestion = reactive({
 	question: '',
@@ -144,17 +159,19 @@ const question = reactive({
 	question: '',
 	type: 'Choices',
 	marks: 1,
+	weight_type: 'Percentage',
 })
 
 const populateFields = () => {
-	let fields = ['option', 'is_correct', 'explanation', 'possibility']
-	let counter = 1
+	let fields = ['option', 'explanation', 'possibility', 'weight']
 	fields.forEach((field) => {
-		while (counter <= 4) {
-			question[`${field}_${counter}`] = field === 'is_correct' ? false : null
-			counter++
+		for (let n = 1; n <= 4; n++) {
+			if (field === 'weight') question[`${field}_${n}`] = 0
+			else question[`${field}_${n}`] = null
 		}
 	})
+	question.multiple = false
+	question.weight_type = 'Percentage'
 }
 
 populateFields()
@@ -186,11 +203,11 @@ const questionData = createResource({
 			if (Object.hasOwn(question, key)) question[key] = data[key]
 		})
 		while (counter <= 4) {
-			question[`is_correct_${counter}`] = data[`is_correct_${counter}`]
-				? true
-				: false
+			question[`weight_${counter}`] = data[`weight_${counter}`] || 0
 			counter++
 		}
+		question.multiple = data.multiple ? true : false
+		question.weight_type = data.weight_type || 'Percentage'
 		question.marks = props.questionDetail.marks
 	},
 })
@@ -231,16 +248,32 @@ const questionRow = createResource({
 const questionCreation = createResource({
 	url: 'frappe.client.insert',
 	makeParams(values) {
+		const { marks, ...questionDoc } = question
+		for (let n = 1; n <= 4; n++) {
+			questionDoc[`weight_${n}`] = parseFloat(questionDoc[`weight_${n}`]) || 0
+		}
 		return {
 			doc: {
 				doctype: 'Question',
-				...question,
+				...questionDoc,
+				multiple: questionDoc.multiple ? 1 : 0,
 			},
 		}
 	},
 })
 
 const submitQuestion = () => {
+	if (question.type === 'Choices') {
+		const maxW = question.weight_type === 'Points' ? parseFloat(question.marks || 1) : 100
+		for (let n = 1; n <= 4; n++) {
+			const w = parseFloat(question[`weight_${n}`]) || 0
+			if (w < 0 || w > maxW) {
+				const unit = question.weight_type === 'Points' ? `points (max: ${maxW})` : '% (max: 100)'
+				toast.warning(`Weight for Option ${n} must be between 0 and ${maxW} ${unit}.`)
+				return
+			}
+		}
+	}
 	if (props.questionDetail?.question) updateQuestion()
 	else addQuestion()
 }
@@ -296,11 +329,16 @@ const questionUpdate = createResource({
 	url: 'frappe.client.set_value',
 	auto: false,
 	makeParams(values) {
+		const { marks, ...questionDoc } = question
+		for (let n = 1; n <= 4; n++) {
+			questionDoc[`weight_${n}`] = parseFloat(questionDoc[`weight_${n}`]) || 0
+		}
 		return {
 			doctype: 'Question',
 			name: questionData.data?.name,
 			fieldname: {
-				...question,
+				...questionDoc,
+				multiple: questionDoc.multiple ? 1 : 0,
 			},
 		}
 	},

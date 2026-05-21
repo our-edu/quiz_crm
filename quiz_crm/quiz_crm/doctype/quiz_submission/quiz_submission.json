@@ -37,7 +37,7 @@
   },
   {
    "fieldname": "score",
-   "fieldtype": "Int",
+   "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Score",
    "reqd": 1
@@ -117,7 +117,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 12:36:40.110346",
+ "modified": "2026-05-20 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Quiz CRM",
  "name": "Quiz Submission",
