@@ -49,3 +49,13 @@ website_route_rules = [
 website_redirects = [
 	{"source": "_quiz_crm", "target": f"/{get_quiz_path()}"},
 ]
+
+# Fixtures
+# ------------------
+
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [["module", "=", "Quiz CRM"]],
+	}
+]
