@@ -12,19 +12,19 @@ from xml.dom.minidom import parseString
 import frappe
 from frappe import _
 from frappe.integrations.frappe_providers.frappecloud_billing import (
-	current_site_info,
-	is_fc_site,
+    current_site_info,
+    is_fc_site,
 )
 from frappe.translate import get_all_translations
 from frappe.utils import (
-	add_days,
-	cint,
-	date_diff,
-	flt,
-	format_date,
-	get_datetime,
-	getdate,
-	now,
+    add_days,
+    cint,
+    date_diff,
+    flt,
+    format_date,
+    get_datetime,
+    getdate,
+    now,
 )
 from frappe.utils.response import Response
 from pypika import functions as fn
@@ -32,2349 +32,2598 @@ from pypika import functions as fn
 from quiz_crm.quiz_crm.course_import_export import export_course_zip, import_course_zip
 from quiz_crm.quiz_crm.doctype.course_lesson.course_lesson import save_progress
 from quiz_crm.quiz_crm.utils import (
-	QUIZ_ROLES,
-	can_modify_batch,
-	can_modify_course,
-	get_batch_details,
-	get_course_details,
-	get_field_meta,
-	get_instructors,
-	get_quiz_route,
-	has_course_instructor_role,
-	has_evaluator_role,
-	has_quiz_role,
-	has_moderator_role,
+    QUIZ_ROLES,
+    can_modify_batch,
+    can_modify_course,
+    get_batch_details,
+    get_course_details,
+    get_field_meta,
+    get_instructors,
+    get_quiz_route,
+    has_course_instructor_role,
+    has_evaluator_role,
+    has_quiz_role,
+    has_moderator_role,
 )
 
 
 @frappe.whitelist()
 def get_user_info():
-	if frappe.session.user == "Guest":
-		return None
+    if frappe.session.user == "Guest":
+        return None
 
-	user = frappe.db.get_value(
-		"User",
-		frappe.session.user,
-		["name", "email", "enabled", "user_image", "full_name", "user_type", "username", "bio"],
-		as_dict=1,
-	)
-	user["roles"] = frappe.get_roles(user.name)
-	user.is_instructor = "Course Creator" in user.roles
-	user.is_moderator = "Moderator" in user.roles
-	user.is_evaluator = "Batch Evaluator" in user.roles
-	user.is_student = not user.is_instructor and not user.is_moderator and not user.is_evaluator
-	user.is_fc_site = is_fc_site()
-	user.is_system_manager = "System Manager" in user.roles
-	user.sitename = frappe.local.site
-	user.developer_mode = frappe.conf.developer_mode
-	if user.is_fc_site and user.is_system_manager:
-		user.site_info = current_site_info()
-	return user
+    user = frappe.db.get_value(
+        "User",
+        frappe.session.user,
+        ["name", "email", "enabled", "user_image",
+         "full_name", "user_type", "username", "bio"],
+        as_dict=1,
+    )
+    user["roles"] = frappe.get_roles(user.name)
+    user.is_instructor = "Course Creator" in user.roles
+    user.is_moderator = "Moderator" in user.roles
+    user.is_evaluator = "Batch Evaluator" in user.roles
+    user.is_student = not user.is_instructor and not user.is_moderator and not user.is_evaluator
+    user.is_fc_site = is_fc_site()
+    user.is_system_manager = "System Manager" in user.roles
+    user.sitename = frappe.local.site
+    user.developer_mode = frappe.conf.developer_mode
+    if user.is_fc_site and user.is_system_manager:
+        user.site_info = current_site_info()
+    return user
 
 
 @frappe.whitelist(allow_guest=True)
 def get_translations():
-	if frappe.session.user != "Guest":
-		language = frappe.db.get_value("User", frappe.session.user, "language")
-	else:
-		language = frappe.db.get_single_value("System Settings", "language")
-	return get_all_translations(language)
+    if frappe.session.user != "Guest":
+        language = frappe.db.get_value("User", frappe.session.user, "language")
+    else:
+        language = frappe.db.get_single_value("System Settings", "language")
+    return get_all_translations(language)
 
 
 @frappe.whitelist()
 def validate_billing_access(billing_type: str, name: str):
-	doctype = "Batch" if billing_type == "batch" else "Course"
-	access, message = verify_billing_access(doctype, name, billing_type)
+    doctype = "Batch" if billing_type == "batch" else "Course"
+    access, message = verify_billing_access(doctype, name, billing_type)
 
-	address = frappe.db.get_value(
-		"Address",
-		{"email_id": frappe.session.user},
-		[
-			"name",
-			"address_title as billing_name",
-			"address_line1",
-			"address_line2",
-			"city",
-			"state",
-			"country",
-			"pincode",
-			"phone",
-		],
-		as_dict=1,
-	)
+    address = frappe.db.get_value(
+        "Address",
+        {"email_id": frappe.session.user},
+        [
+            "name",
+            "address_title as billing_name",
+            "address_line1",
+            "address_line2",
+            "city",
+            "state",
+            "country",
+            "pincode",
+            "phone",
+        ],
+        as_dict=1,
+    )
 
-	payment_fields = get_payment_field_meta()
-	address_fields = get_field_meta(
-		"Address",
-		[
-			"address_line1",
-			"address_line2",
-			"city",
-			"state",
-			"country",
-			"pincode",
-			"phone",
-		],
-	)
-	billing_field_meta = {**payment_fields, **address_fields}
+    payment_fields = get_payment_field_meta()
+    address_fields = get_field_meta(
+        "Address",
+        [
+            "address_line1",
+            "address_line2",
+            "city",
+            "state",
+            "country",
+            "pincode",
+            "phone",
+        ],
+    )
+    billing_field_meta = {**payment_fields, **address_fields}
 
-	return {
-		"access": access,
-		"message": message,
-		"address": address,
-		"billing_field_meta": billing_field_meta,
-	}
+    return {
+        "access": access,
+        "message": message,
+        "address": address,
+        "billing_field_meta": billing_field_meta,
+    }
 
 
 @frappe.whitelist()
 def get_payment_field_meta():
-	return get_field_meta(
-		"Payment",
-		[
-			"member",
-			"billing_name",
-			"source",
-			"payment_for_document_type",
-			"payment_for_document",
-			"currency",
-			"amount",
-			"amount_with_gst",
-			"original_amount",
-			"discount_amount",
-			"coupon",
-			"coupon_code",
-			"address",
-			"gstin",
-			"pan",
-			"payment_id",
-			"order_id",
-			"member_consent",
-		],
-	)
+    return get_field_meta(
+        "Payment",
+        [
+            "member",
+            "billing_name",
+            "source",
+            "payment_for_document_type",
+            "payment_for_document",
+            "currency",
+            "amount",
+            "amount_with_gst",
+            "original_amount",
+            "discount_amount",
+            "coupon",
+            "coupon_code",
+            "address",
+            "gstin",
+            "pan",
+            "payment_id",
+            "order_id",
+            "member_consent",
+        ],
+    )
 
 
 def verify_billing_access(doctype, name, billing_type):
-	access = True
-	message = ""
+    access = True
+    message = ""
 
-	if frappe.session.user == "Guest":
-		access = False
-		message = _("Please login to continue with payment.")
+    if frappe.session.user == "Guest":
+        access = False
+        message = _("Please login to continue with payment.")
 
-	if access and billing_type not in ["course", "batch", "certificate"]:
-		access = False
-		message = _("Module is incorrect.")
+    if access and billing_type not in ["course", "batch", "certificate"]:
+        access = False
+        message = _("Module is incorrect.")
 
-	if access and not frappe.db.exists(doctype, name):
-		access = False
-		message = _("Module Name is incorrect or does not exist.")
+    if access and not frappe.db.exists(doctype, name):
+        access = False
+        message = _("Module Name is incorrect or does not exist.")
 
-	if access and billing_type == "course":
-		membership = frappe.db.exists("Enrollment", {"member": frappe.session.user, "course": name})
-		if membership:
-			access = False
-			message = _("You are already enrolled for this course.")
+    if access and billing_type == "course":
+        membership = frappe.db.exists(
+            "Enrollment", {"member": frappe.session.user, "course": name})
+        if membership:
+            access = False
+            message = _("You are already enrolled for this course.")
 
-	elif access and billing_type == "batch":
-		membership = frappe.db.exists("Batch Enrollment", {"member": frappe.session.user, "batch": name})
-		if membership:
-			access = False
-			message = _("You are already enrolled for this batch.")
+    elif access and billing_type == "batch":
+        membership = frappe.db.exists(
+            "Batch Enrollment", {"member": frappe.session.user, "batch": name})
+        if membership:
+            access = False
+            message = _("You are already enrolled for this batch.")
 
-		seat_count = frappe.get_cached_value("Batch", name, "seat_count")
-		number_of_students = frappe.db.count("Batch Enrollment", {"batch": name})
-		if seat_count <= number_of_students:
-			access = False
-			message = _("Batch is sold out.")
+        seat_count = frappe.get_cached_value("Batch", name, "seat_count")
+        number_of_students = frappe.db.count(
+            "Batch Enrollment", {"batch": name})
+        if seat_count <= number_of_students:
+            access = False
+            message = _("Batch is sold out.")
 
-		start_date = frappe.get_cached_value("Batch", name, "start_date")
-		if start_date and date_diff(start_date, now()) < 0:
-			access = False
-			message = _("Batch has already started.")
+        start_date = frappe.get_cached_value("Batch", name, "start_date")
+        if start_date and date_diff(start_date, now()) < 0:
+            access = False
+            message = _("Batch has already started.")
 
-	elif access and billing_type == "certificate":
-		purchased_certificate = frappe.db.exists(
-			"Enrollment",
-			{
-				"course": name,
-				"member": frappe.session.user,
-				"purchased_certificate": 1,
-			},
-		)
-		if purchased_certificate:
-			access = False
-			message = _("You have already purchased the certificate for this course.")
+    elif access and billing_type == "certificate":
+        purchased_certificate = frappe.db.exists(
+            "Enrollment",
+            {
+                "course": name,
+                "member": frappe.session.user,
+                "purchased_certificate": 1,
+            },
+        )
+        if purchased_certificate:
+            access = False
+            message = _(
+                "You have already purchased the certificate for this course.")
 
-	return access, message
+    return access, message
 
 
 @frappe.whitelist(allow_guest=True)
 def get_job_details(job: str):
-	return frappe.db.get_value(
-		"Job Opportunity",
-		job,
-		[
-			"job_title",
-			"location",
-			"country",
-			"type",
-			"work_mode",
-			"company_name",
-			"company_logo",
-			"company_website",
-			"name",
-			"creation",
-			"description",
-			"owner",
-		],
-		as_dict=1,
-	)
+    return frappe.db.get_value(
+        "Job Opportunity",
+        job,
+        [
+            "job_title",
+            "location",
+            "country",
+            "type",
+            "work_mode",
+            "company_name",
+            "company_logo",
+            "company_website",
+            "name",
+            "creation",
+            "description",
+            "owner",
+        ],
+        as_dict=1,
+    )
 
 
 @frappe.whitelist(allow_guest=True)
 def get_job_opportunities(filters: dict = None, orFilters: dict = None):
-	if not filters:
-		filters = {}
+    if not filters:
+        filters = {}
 
-	jobs = frappe.get_all(
-		"Job Opportunity",
-		filters=filters,
-		or_filters=orFilters,
-		fields=[
-			"job_title",
-			"location",
-			"country",
-			"type",
-			"work_mode",
-			"company_name",
-			"company_logo",
-			"name",
-			"creation",
-			"description",
-		],
-		order_by="creation desc",
-	)
+    jobs = frappe.get_all(
+        "Job Opportunity",
+        filters=filters,
+        or_filters=orFilters,
+        fields=[
+            "job_title",
+            "location",
+            "country",
+            "type",
+            "work_mode",
+            "company_name",
+            "company_logo",
+            "name",
+            "creation",
+            "description",
+        ],
+        order_by="creation desc",
+    )
 
-	for job in jobs:
-		job.description = frappe.utils.strip_html_tags(job.description)
-		job.applicants = frappe.db.count("Job Application", {"job": job.name})
-	return jobs
+    for job in jobs:
+        job.description = frappe.utils.strip_html_tags(job.description)
+        job.applicants = frappe.db.count("Job Application", {"job": job.name})
+    return jobs
 
 
 @frappe.whitelist(allow_guest=True)
 def get_chart_details():
-	details = frappe._dict()
-	details.enrollments = frappe.db.count("Enrollment")
-	details.courses = frappe.db.count(
-		"Course",
-		{
-			"published": 1,
-			"upcoming": 0,
-		},
-	)
-	details.users = frappe.db.count("User", {"enabled": 1, "name": ["not in", ("Administrator", "Guest")]})
-	details.completions = frappe.db.count("Enrollment", {"progress": ["like", "%100%"]})
-	details.certifications = frappe.db.count("Certificate", {"published": 1})
-	return details
+    details = frappe._dict()
+    details.enrollments = frappe.db.count("Enrollment")
+    details.courses = frappe.db.count(
+        "Course",
+        {
+            "published": 1,
+            "upcoming": 0,
+        },
+    )
+    details.users = frappe.db.count(
+        "User", {"enabled": 1, "name": ["not in", ("Administrator", "Guest")]})
+    details.completions = frappe.db.count(
+        "Enrollment", {"progress": ["like", "%100%"]})
+    details.certifications = frappe.db.count("Certificate", {"published": 1})
+    return details
 
 
 def get_file_info(file_url):
-	"""Get file info for the given file URL."""
-	file_info = frappe.db.get_value(
-		"File", {"file_url": file_url}, ["file_name", "file_size", "file_url"], as_dict=1
-	)
-	return file_info
+    """Get file info for the given file URL."""
+    file_info = frappe.db.get_value(
+        "File", {"file_url": file_url}, ["file_name", "file_size", "file_url"], as_dict=1
+    )
+    return file_info
 
 
 @frappe.whitelist(allow_guest=True)
 def get_branding():
-	"""Get branding details."""
-	fields = ["app_name"]
-	image_fields = ["banner_image", "footer_logo", "favicon", "app_logo"]
-	fields = fields + image_fields
-	settings = frappe._dict()
+    """Get branding details."""
+    fields = ["app_name"]
+    image_fields = ["banner_image", "footer_logo", "favicon", "app_logo"]
+    fields = fields + image_fields
+    settings = frappe._dict()
 
-	for field in fields:
-		value = frappe.get_cached_value("Website Settings", None, field)
-		if field in image_fields and value:
-			file_info = get_file_info(value)
-			settings.update({field: json.loads(json.dumps(file_info))})
-		else:
-			settings.update({field: value})
+    for field in fields:
+        value = frappe.get_cached_value("Website Settings", None, field)
+        if field in image_fields and value:
+            file_info = get_file_info(value)
+            settings.update({field: json.loads(json.dumps(file_info))})
+        else:
+            settings.update({field: value})
 
-	return settings
+    return settings
 
 
 @frappe.whitelist()
 def get_unsplash_photos(keyword: str = None):
-	from quiz_crm.unsplash import get_by_keyword, get_list
+    from quiz_crm.unsplash import get_by_keyword, get_list
 
-	if keyword:
-		return get_by_keyword(keyword)
+    if keyword:
+        return get_by_keyword(keyword)
 
-	return frappe.cache().get_value("unsplash_photos", generator=get_list)
+    return frappe.cache().get_value("unsplash_photos", generator=get_list)
 
 
 @frappe.whitelist()
 def get_evaluator_details(evaluator: str):
-	frappe.only_for("Batch Evaluator")
+    frappe.only_for("Batch Evaluator")
 
-	if not frappe.db.exists("Google Calendar", {"user": evaluator}):
-		calendar = frappe.new_doc("Google Calendar")
-		calendar.update({"user": evaluator, "calendar_name": evaluator})
-		calendar.insert()
-	else:
-		calendar = frappe.db.get_value(
-			"Google Calendar", {"user": evaluator}, ["name", "authorization_code"], as_dict=1
-		)
+    if not frappe.db.exists("Google Calendar", {"user": evaluator}):
+        calendar = frappe.new_doc("Google Calendar")
+        calendar.update({"user": evaluator, "calendar_name": evaluator})
+        calendar.insert()
+    else:
+        calendar = frappe.db.get_value(
+            "Google Calendar", {"user": evaluator}, ["name", "authorization_code"], as_dict=1
+        )
 
-	if frappe.db.exists("Course Evaluator", {"evaluator": evaluator}):
-		doc = frappe.get_doc("Course Evaluator", evaluator)
-	else:
-		doc = frappe.new_doc("Course Evaluator")
-		doc.evaluator = evaluator
-		doc.insert()
-	for slot in doc.schedule:
-		print(slot.start_time, slot.end_time)
-	return {
-		"slots": doc.as_dict(),
-		"calendar": calendar.name,
-		"is_authorised": calendar.authorization_code,
-	}
+    if frappe.db.exists("Course Evaluator", {"evaluator": evaluator}):
+        doc = frappe.get_doc("Course Evaluator", evaluator)
+    else:
+        doc = frappe.new_doc("Course Evaluator")
+        doc.evaluator = evaluator
+        doc.insert()
+    for slot in doc.schedule:
+        print(slot.start_time, slot.end_time)
+    return {
+        "slots": doc.as_dict(),
+        "calendar": calendar.name,
+        "is_authorised": calendar.authorization_code,
+    }
 
 
 @frappe.whitelist()
 def get_certified_participants(filters: dict = None, start: int = 0, page_length: int = 100):
-	query = get_certification_query(filters)
-	query = query.orderby("issue_date", order=frappe.qb.desc).offset(start).limit(page_length)
-	participants = query.run(as_dict=True)
+    query = get_certification_query(filters)
+    query = query.orderby("issue_date", order=frappe.qb.desc).offset(
+        start).limit(page_length)
+    participants = query.run(as_dict=True)
 
-	for participant in participants:
-		details = get_certified_participant_details(participant.member)
-		participant.update(details)
+    for participant in participants:
+        details = get_certified_participant_details(participant.member)
+        participant.update(details)
 
-	return participants
+    return participants
 
 
 def get_certified_participant_details(member: str):
-	count = frappe.db.count("Certificate", {"member": member})
-	details = frappe.db.get_value(
-		"User",
-		member,
-		["full_name", "user_image", "username", "country", "headline", "open_to"],
-		as_dict=1,
-	)
-	details["certificate_count"] = count
-	return details
+    count = frappe.db.count("Certificate", {"member": member})
+    details = frappe.db.get_value(
+        "User",
+        member,
+        ["full_name", "user_image", "username",
+         "country", "headline", "open_to"],
+        as_dict=1,
+    )
+    details["certificate_count"] = count
+    return details
 
 
 def get_certification_query(filters: dict = None):
-	Certificate = frappe.qb.DocType("Certificate")
-	User = frappe.qb.DocType("User")
+    Certificate = frappe.qb.DocType("Certificate")
+    User = frappe.qb.DocType("User")
 
-	query = (
-		frappe.qb.from_(Certificate)
-		.select(Certificate.member, Certificate.issue_date)
-		.distinct()
-		.join(User)
-		.on(Certificate.member == User.name)
-		.where(Certificate.published == 1)
-		.where(User.enabled == 1)
-	)
+    query = (
+        frappe.qb.from_(Certificate)
+        .select(Certificate.member, Certificate.issue_date)
+        .distinct()
+        .join(User)
+        .on(Certificate.member == User.name)
+        .where(Certificate.published == 1)
+        .where(User.enabled == 1)
+    )
 
-	if filters:
-		for field, value in filters.items():
-			if field == "category":
-				query = query.where(
-					Certificate.course_title.like(f"%{value}%") | Certificate.batch_title.like(f"%{value}%")
-				)
-			if field == "member_name":
-				query = query.where(Certificate.member_name.like(value[1]))
-			if field == "open_to_work":
-				query = query.where(User.open_to == "Work")
-			if field == "hiring":
-				query = query.where(User.open_to == "Hiring")
-	return query
+    if filters:
+        for field, value in filters.items():
+            if field == "category":
+                query = query.where(
+                    Certificate.course_title.like(
+                        f"%{value}%") | Certificate.batch_title.like(f"%{value}%")
+                )
+            if field == "member_name":
+                query = query.where(Certificate.member_name.like(value[1]))
+            if field == "open_to_work":
+                query = query.where(User.open_to == "Work")
+            if field == "hiring":
+                query = query.where(User.open_to == "Hiring")
+    return query
 
 
 @frappe.whitelist()
 def get_count_of_certified_members(filters: dict = None):
-	query = get_certification_query(filters)
-	result = query.run(as_dict=True)
-	return len(result) or 0
+    query = get_certification_query(filters)
+    result = query.run(as_dict=True)
+    return len(result) or 0
 
 
 @frappe.whitelist()
 def get_certification_categories():
-	categories = []
-	seen = set()
-	docs = frappe.get_all(
-		"Certificate",
-		filters={
-			"published": 1,
-		},
-		fields=["course_title", "batch_title"],
-	)
+    categories = []
+    seen = set()
+    docs = frappe.get_all(
+        "Certificate",
+        filters={
+            "published": 1,
+        },
+        fields=["course_title", "batch_title"],
+    )
 
-	for doc in docs:
-		category = doc.course_title if doc.course_title else doc.batch_title
-		if not category or category in seen:
-			continue
+    for doc in docs:
+        category = doc.course_title if doc.course_title else doc.batch_title
+        if not category or category in seen:
+            continue
 
-		seen.add(category)
-		categories.append({"label": category, "value": category})
-	return categories
+        seen.add(category)
+        categories.append({"label": category, "value": category})
+    return categories
 
 
 @frappe.whitelist()
 def get_all_users():
-	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
-	users = frappe.get_all(
-		"User",
-		{
-			"enabled": 1,
-		},
-		["name", "full_name", "user_image"],
-	)
+    frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
+    users = frappe.get_all(
+        "User",
+        {
+            "enabled": 1,
+        },
+        ["name", "full_name", "user_image"],
+    )
 
-	return {user.name: user for user in users}
+    return {user.name: user for user in users}
 
 
 @frappe.whitelist(allow_guest=True)
 def get_sidebar_settings():
-	quiz_settings = frappe.get_single("Settings")
-	if frappe.session.user == "Guest" and not quiz_settings.allow_guest_access:
-		return []
+    quiz_settings = frappe.get_single("Settings")
+    if frappe.session.user == "Guest" and not quiz_settings.allow_guest_access:
+        return []
 
-	sidebar_items = frappe._dict()
-	items = [
-		"courses",
-		"batches",
-		"certifications",
-		"jobs",
-		"statistics",
-		"notifications",
-		"programming_exercises",
-	]
-	for item in items:
-		sidebar_items[item] = quiz_settings.get(item)
+    sidebar_items = frappe._dict()
+    items = [
+        "courses",
+        "batches",
+        "certifications",
+        "jobs",
+        "statistics",
+        "notifications",
+        "programming_exercises",
+    ]
+    for item in items:
+        sidebar_items[item] = quiz_settings.get(item)
 
-	if len(quiz_settings.sidebar_items):
-		web_pages = frappe.get_all(
-			"Sidebar Item",
-			{"parenttype": "Settings", "parentfield": "sidebar_items"},
-			["web_page", "route", "title as label", "icon", "name"],
-		)
-		for page in web_pages:
-			page.to = page.route
+    if len(quiz_settings.sidebar_items):
+        web_pages = frappe.get_all(
+            "Sidebar Item",
+            {"parenttype": "Settings", "parentfield": "sidebar_items"},
+            ["web_page", "route", "title as label", "icon", "name"],
+        )
+        for page in web_pages:
+            page.to = page.route
 
-		sidebar_items.web_pages = web_pages
+        sidebar_items.web_pages = web_pages
 
-	return sidebar_items
+    return sidebar_items
 
 
 @frappe.whitelist()
 def update_sidebar_item(webpage: str, icon: str):
-	frappe.only_for("Moderator")
-	filters = {
-		"web_page": webpage,
-		"parenttype": "Settings",
-		"parentfield": "sidebar_items",
-		"parent": "Settings",
-	}
+    frappe.only_for("Moderator")
+    filters = {
+        "web_page": webpage,
+        "parenttype": "Settings",
+        "parentfield": "sidebar_items",
+        "parent": "Settings",
+    }
 
-	if frappe.db.exists("Sidebar Item", filters):
-		frappe.db.set_value("Sidebar Item", filters, "icon", icon)
-	else:
-		doc = frappe.new_doc("Sidebar Item")
-		doc.update(filters)
-		doc.icon = icon
-		doc.insert()
+    if frappe.db.exists("Sidebar Item", filters):
+        frappe.db.set_value("Sidebar Item", filters, "icon", icon)
+    else:
+        doc = frappe.new_doc("Sidebar Item")
+        doc.update(filters)
+        doc.icon = icon
+        doc.insert()
 
 
 @frappe.whitelist()
 def delete_sidebar_item(webpage: str):
-	frappe.only_for("Moderator")
-	return frappe.db.delete(
-		"Sidebar Item",
-		{
-			"web_page": webpage,
-			"parenttype": "Settings",
-			"parentfield": "sidebar_items",
-			"parent": "Settings",
-		},
-	)
+    frappe.only_for("Moderator")
+    return frappe.db.delete(
+        "Sidebar Item",
+        {
+            "web_page": webpage,
+            "parenttype": "Settings",
+            "parentfield": "sidebar_items",
+            "parent": "Settings",
+        },
+    )
 
 
 @frappe.whitelist()
 def delete_lesson(lesson: str, chapter: str):
-	course = frappe.db.get_value("Course Chapter", chapter, "course")
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to delete this lesson."), frappe.PermissionError)
+    course = frappe.db.get_value("Course Chapter", chapter, "course")
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to delete this lesson."), frappe.PermissionError)
 
-	lessons = frappe.get_all(
-		"Lesson Reference",
-		{"parent": chapter},
-		pluck="lesson",
-		order_by="idx",
-	)
-	lessons.remove(lesson)
-	frappe.db.delete("Lesson Reference", {"parent": chapter, "lesson": lesson})
-	update_index(lessons, chapter)
+    lessons = frappe.get_all(
+        "Lesson Reference",
+        {"parent": chapter},
+        pluck="lesson",
+        order_by="idx",
+    )
+    lessons.remove(lesson)
+    frappe.db.delete("Lesson Reference", {"parent": chapter, "lesson": lesson})
+    update_index(lessons, chapter)
 
-	frappe.db.delete("Course Progress", {"lesson": lesson})
-	frappe.delete_doc("Course Lesson", lesson)
+    frappe.db.delete("Course Progress", {"lesson": lesson})
+    frappe.delete_doc("Course Lesson", lesson)
 
 
 @frappe.whitelist()
 def update_lesson_index(lesson: str, sourceChapter: str, targetChapter: str, idx: int):
-	course = frappe.db.get_value("Course Chapter", sourceChapter, "course")
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to modify this lesson."), frappe.PermissionError)
+    course = frappe.db.get_value("Course Chapter", sourceChapter, "course")
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to modify this lesson."), frappe.PermissionError)
 
-	hasMoved = sourceChapter == targetChapter
-	update_source_chapter(lesson, sourceChapter, idx, hasMoved)
-	if not hasMoved:
-		update_target_chapter(lesson, targetChapter, idx)
+    hasMoved = sourceChapter == targetChapter
+    update_source_chapter(lesson, sourceChapter, idx, hasMoved)
+    if not hasMoved:
+        update_target_chapter(lesson, targetChapter, idx)
 
 
 def update_source_chapter(lesson: str, chapter: str, idx: int, hasMoved: bool = False):
-	lessons = frappe.get_all(
-		"Lesson Reference",
-		{
-			"parent": chapter,
-		},
-		pluck="lesson",
-		order_by="idx",
-	)
+    lessons = frappe.get_all(
+        "Lesson Reference",
+        {
+            "parent": chapter,
+        },
+        pluck="lesson",
+        order_by="idx",
+    )
 
-	lessons.remove(lesson)
-	if not hasMoved:
-		frappe.db.delete("Lesson Reference", {"parent": chapter, "lesson": lesson})
-	else:
-		lessons.insert(idx, lesson)
+    lessons.remove(lesson)
+    if not hasMoved:
+        frappe.db.delete("Lesson Reference", {
+                         "parent": chapter, "lesson": lesson})
+    else:
+        lessons.insert(idx, lesson)
 
-	update_index(lessons, chapter)
+    update_index(lessons, chapter)
 
 
 def update_target_chapter(lesson: str, chapter: str, idx: int):
-	lessons = frappe.get_all(
-		"Lesson Reference",
-		{
-			"parent": chapter,
-		},
-		pluck="lesson",
-		order_by="idx",
-	)
+    lessons = frappe.get_all(
+        "Lesson Reference",
+        {
+            "parent": chapter,
+        },
+        pluck="lesson",
+        order_by="idx",
+    )
 
-	lessons.insert(idx, lesson)
-	new_lesson_reference = frappe.new_doc("Lesson Reference")
-	new_lesson_reference.update(
-		{
-			"lesson": lesson,
-			"parent": chapter,
-			"parenttype": "Course Chapter",
-			"parentfield": "lessons",
-		}
-	)
-	new_lesson_reference.insert()
-	update_index(lessons, chapter)
+    lessons.insert(idx, lesson)
+    new_lesson_reference = frappe.new_doc("Lesson Reference")
+    new_lesson_reference.update(
+        {
+            "lesson": lesson,
+            "parent": chapter,
+            "parenttype": "Course Chapter",
+            "parentfield": "lessons",
+        }
+    )
+    new_lesson_reference.insert()
+    update_index(lessons, chapter)
 
 
 def update_index(lessons: list, chapter: str):
-	for row in lessons:
-		frappe.db.set_value(
-			"Lesson Reference", {"lesson": row, "parent": chapter}, "idx", lessons.index(row) + 1
-		)
+    for row in lessons:
+        frappe.db.set_value(
+            "Lesson Reference", {
+                "lesson": row, "parent": chapter}, "idx", lessons.index(row) + 1
+        )
 
 
 @frappe.whitelist()
 def update_chapter_index(chapter: str, course: str, idx: int):
-	"""Update the index of a chapter within a course"""
+    """Update the index of a chapter within a course"""
 
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to modify this chapter."), frappe.PermissionError)
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to modify this chapter."), frappe.PermissionError)
 
-	chapters = frappe.get_all(
-		"Chapter Reference",
-		{"parent": course},
-		pluck="chapter",
-		order_by="idx",
-	)
+    chapters = frappe.get_all(
+        "Chapter Reference",
+        {"parent": course},
+        pluck="chapter",
+        order_by="idx",
+    )
 
-	if chapter in chapters:
-		chapters.remove(chapter)
+    if chapter in chapters:
+        chapters.remove(chapter)
 
-	chapters.insert(idx, chapter)
+    chapters.insert(idx, chapter)
 
-	for i, chapter_name in enumerate(chapters):
-		frappe.db.set_value("Chapter Reference", {"chapter": chapter_name, "parent": course}, "idx", i + 1)
+    for i, chapter_name in enumerate(chapters):
+        frappe.db.set_value("Chapter Reference", {
+                            "chapter": chapter_name, "parent": course}, "idx", i + 1)
 
 
 @frappe.whitelist()
 def get_members(start: int = 0, search: str = None):
-	frappe.only_for(["Moderator"])
-	filters = {"enabled": 1, "name": ["not in", ["Administrator", "Guest"]]}
-	or_filters = {}
+    frappe.only_for(["Moderator"])
+    filters = {"enabled": 1, "name": ["not in", ["Administrator", "Guest"]]}
+    or_filters = {}
 
-	if search:
-		or_filters["full_name"] = ["like", f"%{search}%"]
-		or_filters["email"] = ["like", f"%{search}%"]
+    if search:
+        or_filters["full_name"] = ["like", f"%{search}%"]
+        or_filters["email"] = ["like", f"%{search}%"]
 
-	members = frappe.get_all(
-		"User",
-		filters=filters,
-		fields=["name", "full_name", "user_image", "username", "last_active"],
-		or_filters=or_filters,
-		page_length=20,
-		start=start,
-	)
+    members = frappe.get_all(
+        "User",
+        filters=filters,
+        fields=["name", "full_name", "user_image",
+                "username", "last_active"],
+        or_filters=or_filters,
+        page_length=20,
+        start=start,
+    )
 
-	for member in members:
-		roles = frappe.get_all(
-			"Has Role",
-			{
-				"parent": member.name,
-				"parenttype": "User",
-			},
-			pluck="role",
-		)
-		if "Moderator" in roles:
-			member.role = "Moderator"
-		elif "Course Creator" in roles:
-			member.role = "Course Creator"
-		elif "Batch Evaluator" in roles:
-			member.role = "Batch Evaluator"
-		elif "Quiz Student" in roles:
-			member.role = "Quiz Student"
+    for member in members:
+        roles = frappe.get_all(
+            "Has Role",
+            {
+                "parent": member.name,
+                "parenttype": "User",
+            },
+            pluck="role",
+        )
+        if "Moderator" in roles:
+            member.role = "Moderator"
+        elif "Course Creator" in roles:
+            member.role = "Course Creator"
+        elif "Batch Evaluator" in roles:
+            member.role = "Batch Evaluator"
+        elif "Quiz Student" in roles:
+            member.role = "Quiz Student"
 
-	return members
+    return members
 
 
 def check_app_permission():
-	"""Check if the user has permission to access the app."""
-	if frappe.session.user == "Administrator":
-		return True
+    """Check if the user has permission to access the app."""
+    if frappe.session.user == "Administrator":
+        return True
 
-	return has_quiz_role()
+    return has_quiz_role()
 
 
 @frappe.whitelist()
 def save_evaluation_details(
-	member: str,
-	course: str,
-	date_value: str,
-	start_time: str,
-	end_time: str,
-	status: str,
-	batch_name: str = None,
-	evaluator: str = None,
-	rating: float = 0,
-	summary: str = None,
+        member: str,
+        course: str,
+        date_value: str,
+        start_time: str,
+        end_time: str,
+        status: str,
+        batch_name: str = None,
+        evaluator: str = None,
+        rating: float = 0,
+        summary: str = None,
 ):
-	"""
-	Save evaluation details for a member against a course.
-	"""
-	frappe.only_for(["Batch Evaluator", "Moderator"])
-	evaluation = frappe.db.exists("Certificate Evaluation", {"member": member, "course": course})
+    """
+    Save evaluation details for a member against a course.
+    """
+    frappe.only_for(["Batch Evaluator", "Moderator"])
+    evaluation = frappe.db.exists("Certificate Evaluation", {
+                                  "member": member, "course": course})
 
-	details = {
-		"date": date_value,
-		"start_time": start_time,
-		"end_time": end_time,
-		"status": status,
-		"rating": rating / 5,
-		"summary": summary,
-		"batch_name": batch_name,
-	}
+    details = {
+        "date": date_value,
+        "start_time": start_time,
+        "end_time": end_time,
+        "status": status,
+        "rating": rating / 5,
+        "summary": summary,
+        "batch_name": batch_name,
+    }
 
-	if evaluation:
-		frappe.db.set_value("Certificate Evaluation", evaluation, details)
-		return evaluation
-	else:
-		doc = frappe.new_doc("Certificate Evaluation")
-		details.update(
-			{
-				"member": member,
-				"course": course,
-				"evaluator": evaluator,
-			}
-		)
-		doc.update(details)
-		doc.insert()
-		return doc.name
+    if evaluation:
+        frappe.db.set_value("Certificate Evaluation", evaluation, details)
+        return evaluation
+    else:
+        doc = frappe.new_doc("Certificate Evaluation")
+        details.update(
+            {
+                "member": member,
+                "course": course,
+                "evaluator": evaluator,
+            }
+        )
+        doc.update(details)
+        doc.insert()
+        return doc.name
 
 
 @frappe.whitelist()
 def save_certificate_details(
-	member: str,
-	issue_date: str,
-	template: str,
-	course: str = None,
-	batch_name: str = None,
-	evaluator: str = None,
-	expiry_date: str = None,
-	published: bool = True,
+        member: str,
+        issue_date: str,
+        template: str,
+        course: str = None,
+        batch_name: str = None,
+        evaluator: str = None,
+        expiry_date: str = None,
+        published: bool = True,
 ):
-	"""
-	Save certificate details for a member against a course.
-	"""
-	frappe.only_for(["Batch Evaluator", "Moderator"])
-	certificate = frappe.db.exists("Certificate", {"member": member, "course": course})
+    """
+    Save certificate details for a member against a course.
+    """
+    frappe.only_for(["Batch Evaluator", "Moderator"])
+    certificate = frappe.db.exists(
+        "Certificate", {"member": member, "course": course})
 
-	details = {
-		"published": published,
-		"issue_date": issue_date,
-		"expiry_date": expiry_date,
-		"template": template,
-		"batch_name": batch_name,
-	}
+    details = {
+        "published": published,
+        "issue_date": issue_date,
+        "expiry_date": expiry_date,
+        "template": template,
+        "batch_name": batch_name,
+    }
 
-	if certificate:
-		frappe.db.set_value("Certificate", certificate, details)
-		return certificate
-	else:
-		doc = frappe.new_doc("Certificate")
-		details.update(
-			{
-				"member": member,
-				"course": course,
-				"evaluator": evaluator,
-			}
-		)
-		doc.update(details)
-		doc.insert()
-		return doc.name
+    if certificate:
+        frappe.db.set_value("Certificate", certificate, details)
+        return certificate
+    else:
+        doc = frappe.new_doc("Certificate")
+        details.update(
+            {
+                "member": member,
+                "course": course,
+                "evaluator": evaluator,
+            }
+        )
+        doc.update(details)
+        doc.insert()
+        return doc.name
 
 
 @frappe.whitelist()
 def delete_documents(doctype: str, documents: list):
-	frappe.only_for("Moderator")
-	meta = frappe.get_meta(doctype)
-	non_quiz_allowed = ["Payment Gateway", "Email Template"]
-	if meta.module != "Quiz CRM" and doctype not in non_quiz_allowed:
-		frappe.throw(_("Deletion not allowed for {0}").format(doctype))
-	for doc in documents:
-		if not isinstance(doc, str) or not doc.strip():
-			frappe.throw(_("Invalid document name"))
-		frappe.delete_doc(doctype, doc)
+    frappe.only_for("Moderator")
+    meta = frappe.get_meta(doctype)
+    non_quiz_allowed = ["Payment Gateway", "Email Template"]
+    if meta.module != "Quiz CRM" and doctype not in non_quiz_allowed:
+        frappe.throw(_("Deletion not allowed for {0}").format(doctype))
+    for doc in documents:
+        if not isinstance(doc, str) or not doc.strip():
+            frappe.throw(_("Invalid document name"))
+        frappe.delete_doc(doctype, doc)
 
 
 @frappe.whitelist()
 def get_payment_gateway_details(payment_gateway: str):
-	frappe.only_for("Moderator")
-	gateway = frappe.get_doc("Payment Gateway", payment_gateway)
+    frappe.only_for("Moderator")
+    gateway = frappe.get_doc("Payment Gateway", payment_gateway)
 
-	if gateway.gateway_controller is None:
-		try:
-			data = frappe.get_doc(f"{payment_gateway} Settings").as_dict()
-			meta = frappe.get_meta(f"{payment_gateway} Settings").fields
-			doctype = f"{payment_gateway} Settings"
-			docname = f"{payment_gateway} Settings"
-		except Exception:
-			frappe.throw(_("{0} Settings not found").format(payment_gateway))
-	else:
-		try:
-			data = frappe.get_doc(gateway.gateway_settings, gateway.gateway_controller).as_dict()
-			meta = frappe.get_meta(gateway.gateway_settings).fields
-			doctype = gateway.gateway_settings
-			docname = gateway.gateway_controller
-		except Exception:
-			frappe.throw(_("{0} Settings not found").format(payment_gateway))
+    if gateway.gateway_controller is None:
+        try:
+            data = frappe.get_doc(f"{payment_gateway} Settings").as_dict()
+            meta = frappe.get_meta(f"{payment_gateway} Settings").fields
+            doctype = f"{payment_gateway} Settings"
+            docname = f"{payment_gateway} Settings"
+        except Exception:
+            frappe.throw(_("{0} Settings not found").format(payment_gateway))
+    else:
+        try:
+            data = frappe.get_doc(gateway.gateway_settings,
+                                  gateway.gateway_controller).as_dict()
+            meta = frappe.get_meta(gateway.gateway_settings).fields
+            doctype = gateway.gateway_settings
+            docname = gateway.gateway_controller
+        except Exception:
+            frappe.throw(_("{0} Settings not found").format(payment_gateway))
 
-	gateway_fields = get_transformed_fields(meta, data)
+    gateway_fields = get_transformed_fields(meta, data)
 
-	return {
-		"fields": gateway_fields,
-		"data": data,
-		"doctype": doctype,
-		"docname": docname,
-	}
+    return {
+        "fields": gateway_fields,
+        "data": data,
+        "doctype": doctype,
+        "docname": docname,
+    }
 
 
 def get_transformed_fields(meta: list, data: dict = None):
-	transformed_fields = []
-	for row in meta:
-		if row.fieldtype not in ["Column Break", "Section Break"]:
-			if row.fieldtype in ["Attach", "Attach Image"]:
-				fieldtype = "Upload"
-				if data and data.get(row.fieldname):
-					data[row.fieldname] = get_file_info(data.get(row.fieldname))
-			elif row.fieldtype == "Check":
-				fieldtype = "checkbox"
-			else:
-				fieldtype = row.fieldtype
+    transformed_fields = []
+    for row in meta:
+        if row.fieldtype not in ["Column Break", "Section Break"]:
+            if row.fieldtype in ["Attach", "Attach Image"]:
+                fieldtype = "Upload"
+                if data and data.get(row.fieldname):
+                    data[row.fieldname] = get_file_info(
+                        data.get(row.fieldname))
+            elif row.fieldtype == "Check":
+                fieldtype = "checkbox"
+            else:
+                fieldtype = row.fieldtype
 
-			field = {
-				"label": row.label,
-				"name": row.fieldname,
-				"type": fieldtype,
-			}
+            field = {
+                "label": row.label,
+                "name": row.fieldname,
+                "type": fieldtype,
+            }
 
-			if row.reqd:
-				field["reqd"] = 1
+            if row.reqd:
+                field["reqd"] = 1
 
-			if row.options:
-				field["options"] = row.options
+            if row.options:
+                field["options"] = row.options
 
-			if row.default:
-				field["default"] = row.default
+            if row.default:
+                field["default"] = row.default
 
-			if row.description:
-				field["description"] = row.description
+            if row.description:
+                field["description"] = row.description
 
-			transformed_fields.append(field)
+            transformed_fields.append(field)
 
-	return transformed_fields
+    return transformed_fields
 
 
 @frappe.whitelist()
 def get_new_gateway_fields(doctype: str):
-	frappe.only_for("Moderator")
-	try:
-		meta = frappe.get_meta(doctype).fields
-	except Exception:
-		frappe.throw(_("{0} not found").format(doctype))
+    frappe.only_for("Moderator")
+    try:
+        meta = frappe.get_meta(doctype).fields
+    except Exception:
+        frappe.throw(_("{0} not found").format(doctype))
 
-	transformed_fields = get_transformed_fields(meta)
+    transformed_fields = get_transformed_fields(meta)
 
-	return transformed_fields
+    return transformed_fields
 
 
 @frappe.whitelist()
 def get_announcements(batch: str):
-	roles = frappe.get_roles()
-	is_batch_student = frappe.db.exists(
-		"Batch Enrollment", {"batch": batch, "member": frappe.session.user}
-	)
-	is_admin = "Moderator" in roles or "Batch Evaluator" in roles
+    roles = frappe.get_roles()
+    is_batch_student = frappe.db.exists(
+        "Batch Enrollment", {"batch": batch, "member": frappe.session.user}
+    )
+    is_admin = "Moderator" in roles or "Batch Evaluator" in roles
 
-	if not (is_batch_student or is_admin):
-		frappe.throw(
-			_("You do not have permission to access announcements for this batch."), frappe.PermissionError
-		)
+    if not (is_batch_student or is_admin):
+        frappe.throw(
+            _("You do not have permission to access announcements for this batch."), frappe.PermissionError
+        )
 
-	communications = frappe.get_all(
-		"Communication",
-		filters={
-			"reference_doctype": "Batch",
-			"reference_name": batch,
-		},
-		fields=[
-			"subject",
-			"content",
-			"recipients",
-			"cc",
-			"communication_date",
-			"sender",
-			"sender_full_name",
-		],
-		order_by="communication_date desc",
-	)
+    communications = frappe.get_all(
+        "Communication",
+        filters={
+            "reference_doctype": "Batch",
+            "reference_name": batch,
+        },
+        fields=[
+            "subject",
+            "content",
+            "recipients",
+            "cc",
+            "communication_date",
+            "sender",
+            "sender_full_name",
+        ],
+        order_by="communication_date desc",
+    )
 
-	for communication in communications:
-		communication.image = frappe.get_cached_value("User", communication.sender, "user_image")
+    for communication in communications:
+        communication.image = frappe.get_cached_value(
+            "User", communication.sender, "user_image")
 
-	return communications
+    return communications
 
 
 @frappe.whitelist()
 def delete_course(course: str):
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to delete this course."), frappe.PermissionError)
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to delete this course."), frappe.PermissionError)
 
-	frappe.db.delete("Enrollment", {"course": course})
-	frappe.db.delete("Course Progress", {"course": course})
-	frappe.db.delete("Certificate", {"course": course})
-	frappe.db.delete("Batch Course", {"course": course})
-	frappe.db.delete("Course Review", {"course": course})
-	frappe.db.set_value("Quiz", {"course": course}, {"course": None, "lesson": None})
-	frappe.db.set_value("Quiz Submission", {"course": course}, "course", None)
+    frappe.db.delete("Enrollment", {"course": course})
+    frappe.db.delete("Course Progress", {"course": course})
+    frappe.db.delete("Certificate", {"course": course})
+    frappe.db.delete("Batch Course", {"course": course})
+    frappe.db.delete("Course Review", {"course": course})
+    frappe.db.set_value("Quiz", {"course": course}, {
+                        "course": None, "lesson": None})
+    frappe.db.set_value("Quiz Submission", {"course": course}, "course", None)
 
-	chapters = frappe.get_all("Course Chapter", {"course": course}, pluck="name")
-	frappe.db.delete("Chapter Reference", {"parent": course})
+    chapters = frappe.get_all(
+        "Course Chapter", {"course": course}, pluck="name")
+    frappe.db.delete("Chapter Reference", {"parent": course})
 
-	for chapter in chapters:
-		lessons = frappe.get_all("Course Lesson", {"chapter": chapter}, pluck="name")
+    for chapter in chapters:
+        lessons = frappe.get_all(
+            "Course Lesson", {"chapter": chapter}, pluck="name")
 
-		frappe.db.delete("Lesson Reference", {"parent": chapter})
+        frappe.db.delete("Lesson Reference", {"parent": chapter})
 
-		for lesson in lessons:
-			topics = frappe.get_all(
-				"Discussion Topic",
-				{"reference_doctype": "Course Lesson", "reference_docname": lesson},
-				pluck="name",
-			)
+        for lesson in lessons:
+            topics = frappe.get_all(
+                "Discussion Topic",
+                {"reference_doctype": "Course Lesson",
+                 "reference_docname": lesson},
+                pluck="name",
+            )
 
-			for topic in topics:
-				frappe.db.delete("Discussion Reply", {"topic": topic})
-				frappe.db.delete("Discussion Topic", topic)
+            for topic in topics:
+                frappe.db.delete("Discussion Reply", {"topic": topic})
+                frappe.db.delete("Discussion Topic", topic)
 
-			frappe.delete_doc("Course Lesson", lesson)
+            frappe.delete_doc("Course Lesson", lesson)
 
-	for chapter in chapters:
-		frappe.delete_doc("Course Chapter", chapter)
+    for chapter in chapters:
+        frappe.delete_doc("Course Chapter", chapter)
 
-	frappe.delete_doc("Course", course)
+    frappe.delete_doc("Course", course)
 
 
 @frappe.whitelist()
 def delete_batch(batch: str):
-	if not can_modify_batch(batch):
-		frappe.throw(_("You do not have permission to delete this batch."), frappe.PermissionError)
+    if not can_modify_batch(batch):
+        frappe.throw(
+            _("You do not have permission to delete this batch."), frappe.PermissionError)
 
-	frappe.db.delete("Batch Enrollment", {"batch": batch})
-	frappe.db.delete("Batch Course", {"parent": batch, "parenttype": "Batch"})
-	frappe.db.delete("Assessment", {"parent": batch, "parenttype": "Batch"})
-	frappe.db.delete("Batch Timetable", {"parent": batch, "parenttype": "Batch"})
-	frappe.db.delete("Batch Feedback", {"batch": batch})
-	delete_batch_discussions(batch)
-	frappe.db.delete("Batch", batch)
+    frappe.db.delete("Batch Enrollment", {"batch": batch})
+    frappe.db.delete("Batch Course", {"parent": batch, "parenttype": "Batch"})
+    frappe.db.delete("Assessment", {"parent": batch, "parenttype": "Batch"})
+    frappe.db.delete("Batch Timetable", {
+                     "parent": batch, "parenttype": "Batch"})
+    frappe.db.delete("Batch Feedback", {"batch": batch})
+    delete_batch_discussions(batch)
+    frappe.db.delete("Batch", batch)
 
 
 def delete_batch_discussions(batch: str):
-	topics = frappe.get_all(
-		"Discussion Topic",
-		{"reference_doctype": "Batch", "reference_docname": batch},
-		pluck="name",
-	)
+    topics = frappe.get_all(
+        "Discussion Topic",
+        {"reference_doctype": "Batch", "reference_docname": batch},
+        pluck="name",
+    )
 
-	for topic in topics:
-		frappe.db.delete("Discussion Reply", {"topic": topic})
-		frappe.db.delete("Discussion Topic", topic)
+    for topic in topics:
+        frappe.db.delete("Discussion Reply", {"topic": topic})
+        frappe.db.delete("Discussion Topic", topic)
 
 
 def give_discussions_permission():
-	doctypes = ["Discussion Topic", "Discussion Reply"]
-	roles = ["Quiz Student", "Course Creator", "Moderator", "Batch Evaluator"]
-	for doctype in doctypes:
-		for role in roles:
-			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role}):
-				frappe.get_doc(
-					{
-						"doctype": "Custom DocPerm",
-						"parent": doctype,
-						"role": role,
-						"read": 1,
-						"write": 1,
-						"create": 1,
-						"delete": 1,
-						"if_owner": 0 if role == "Moderator" else 1,
-					}
-				).save()
+    doctypes = ["Discussion Topic", "Discussion Reply"]
+    roles = ["Quiz Student", "Course Creator", "Moderator", "Batch Evaluator"]
+    for doctype in doctypes:
+        for role in roles:
+            if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role}):
+                frappe.get_doc(
+                    {
+                        "doctype": "Custom DocPerm",
+                        "parent": doctype,
+                        "role": role,
+                        "read": 1,
+                        "write": 1,
+                        "create": 1,
+                        "delete": 1,
+                        "if_owner": 0 if role == "Moderator" else 1,
+                    }
+                ).save()
 
 
 @frappe.whitelist()
 def upsert_chapter(
-	title: str, course: str, is_scorm_package: bool, scorm_package: dict = None, name: str = None
+        title: str, course: str, is_scorm_package: bool, scorm_package: dict = None, name: str = None
 ):
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to modify this chapter."), frappe.PermissionError)
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to modify this chapter."), frappe.PermissionError)
 
-	values = frappe._dict({"title": title, "course": course, "is_scorm_package": is_scorm_package})
+    values = frappe._dict(
+        {"title": title, "course": course, "is_scorm_package": is_scorm_package})
 
-	if is_scorm_package:
-		scorm_package = frappe._dict(scorm_package)
-		extract_path = extract_package(course, title, scorm_package)
+    if is_scorm_package:
+        scorm_package = frappe._dict(scorm_package)
+        extract_path = extract_package(course, title, scorm_package)
 
-		values.update(
-			{
-				"scorm_package": scorm_package.name,
-				"scorm_package_path": extract_path.split("public")[1],
-				"manifest_file": get_manifest_file(extract_path).split("public")[1],
-				"launch_file": get_launch_file(extract_path).split("public")[1],
-			}
-		)
+        values.update(
+            {
+                "scorm_package": scorm_package.name,
+                "scorm_package_path": extract_path.split("public")[1],
+                "manifest_file": get_manifest_file(extract_path).split("public")[1],
+                "launch_file": get_launch_file(extract_path).split("public")[1],
+            }
+        )
 
-	if name:
-		chapter = frappe.get_doc("Course Chapter", name)
-	else:
-		chapter = frappe.new_doc("Course Chapter")
+    if name:
+        chapter = frappe.get_doc("Course Chapter", name)
+    else:
+        chapter = frappe.new_doc("Course Chapter")
 
-	chapter.update(values)
-	chapter.save()
+    chapter.update(values)
+    chapter.save()
 
-	if is_scorm_package and not len(chapter.lessons):
-		add_lesson(title, chapter.name, course, 1)
+    if is_scorm_package and not len(chapter.lessons):
+        add_lesson(title, chapter.name, course, 1)
 
-	return chapter
+    return chapter
 
 
 def extract_package(course: str, title: str, scorm_package: dict):
-	package = frappe.get_doc("File", scorm_package.name)
-	zip_path = package.get_full_path()
-	scorm_root = os.path.realpath(frappe.get_site_path("public", "scorm"))
-	extract_path = frappe.get_site_path("public", "scorm", course, title)
+    package = frappe.get_doc("File", scorm_package.name)
+    zip_path = package.get_full_path()
+    scorm_root = os.path.realpath(frappe.get_site_path("public", "scorm"))
+    extract_path = frappe.get_site_path("public", "scorm", course, title)
 
-	if not os.path.realpath(extract_path).startswith(scorm_root + os.sep):
-		frappe.throw(_("Invalid course or chapter name"))
+    if not os.path.realpath(extract_path).startswith(scorm_root + os.sep):
+        frappe.throw(_("Invalid course or chapter name"))
 
-	with zipfile.ZipFile(zip_path, "r") as zf:
-		dest = os.path.realpath(extract_path)
-		for name in zf.namelist():
-			target = os.path.realpath(os.path.join(extract_path, name))
-			if not target.startswith(dest + os.sep) and target != dest:
-				frappe.throw(_("Invalid file path in package"))
-		zf.extractall(extract_path)
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        dest = os.path.realpath(extract_path)
+        for name in zf.namelist():
+            target = os.path.realpath(os.path.join(extract_path, name))
+            if not target.startswith(dest + os.sep) and target != dest:
+                frappe.throw(_("Invalid file path in package"))
+        zf.extractall(extract_path)
 
-	return extract_path
+    return extract_path
 
 
 def check_for_malicious_code(zip_path):
-	suspicious_patterns = [
-		# Unsafe inline JavaScript
-		r'on(click|load|mouseover|error|submit|focus|blur|change|keyup|keydown|keypress|resize)=".*?"',  # Inline event handlers (e.g., onerror, onclick)
-		r'<script.*?src=["\']http',  # External script tags
-		r"eval\(",  # Usage of eval()
-		r"Function\(",  # Usage of Function constructor
-		r"(btoa|atob)\(",  # Base64 encoding/decoding
-		# Dangerous XML patterns
-		r"<!ENTITY",  # XXE-related
-		r"<\?xml-stylesheet .*?>",  # External stylesheets in XML
-	]
+    suspicious_patterns = [
+        # Unsafe inline JavaScript
+        # Inline event handlers (e.g., onerror, onclick)
+        r'on(click|load|mouseover|error|submit|focus|blur|change|keyup|keydown|keypress|resize)=".*?"',
+        r'<script.*?src=["\']http',  # External script tags
+        r"eval\(",  # Usage of eval()
+        r"Function\(",  # Usage of Function constructor
+        r"(btoa|atob)\(",  # Base64 encoding/decoding
+        # Dangerous XML patterns
+        r"<!ENTITY",  # XXE-related
+        r"<\?xml-stylesheet .*?>",  # External stylesheets in XML
+    ]
 
-	with zipfile.ZipFile(zip_path, "r") as zf:
-		for file_name in zf.namelist():
-			if file_name.endswith((".html", ".js", ".xml")):
-				with zf.open(file_name) as file:
-					content = file.read().decode("utf-8", errors="ignore")
-					for pattern in suspicious_patterns:
-						if re.search(pattern, content):
-							frappe.throw(_("Suspicious pattern found in {0}: {1}").format(file_name, pattern))
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for file_name in zf.namelist():
+            if file_name.endswith((".html", ".js", ".xml")):
+                with zf.open(file_name) as file:
+                    content = file.read().decode("utf-8", errors="ignore")
+                    for pattern in suspicious_patterns:
+                        if re.search(pattern, content):
+                            frappe.throw(_("Suspicious pattern found in {0}: {1}").format(
+                                file_name, pattern))
 
 
 def get_manifest_file(extract_path: str):
-	manifest_file = None
-	for root, _dirs, files in os.walk(extract_path):
-		for file in files:
-			if file == "imsmanifest.xml":
-				manifest_file = os.path.join(root, file)
-				break
-		if manifest_file:
-			break
-	return manifest_file
+    manifest_file = None
+    for root, _dirs, files in os.walk(extract_path):
+        for file in files:
+            if file == "imsmanifest.xml":
+                manifest_file = os.path.join(root, file)
+                break
+        if manifest_file:
+            break
+    return manifest_file
 
 
 def get_launch_file(extract_path: str):
-	launch_file = None
-	manifest_file = get_manifest_file(extract_path)
+    launch_file = None
+    manifest_file = get_manifest_file(extract_path)
 
-	if manifest_file:
-		with open(manifest_file) as file:
-			data = file.read()
-			dom = parseString(data)
-			resource = dom.getElementsByTagName("resource")
-			for res in resource:
-				if (
-					res.getAttribute("adlcp:scormtype") == "sco"
-					or res.getAttribute("adlcp:scormType") == "sco"
-				):
-					launch_file = res.getAttribute("href")
-					break
+    if manifest_file:
+        with open(manifest_file) as file:
+            data = file.read()
+            dom = parseString(data)
+            resource = dom.getElementsByTagName("resource")
+            for res in resource:
+                if (
+                        res.getAttribute("adlcp:scormtype") == "sco"
+                        or res.getAttribute("adlcp:scormType") == "sco"
+                ):
+                    launch_file = res.getAttribute("href")
+                    break
 
-		if launch_file:
-			launch_file = os.path.join(os.path.dirname(manifest_file), launch_file)
+        if launch_file:
+            launch_file = os.path.join(
+                os.path.dirname(manifest_file), launch_file)
 
-	return launch_file
+    return launch_file
 
 
 def add_lesson(title: str, chapter: str, course: str, idx: int):
-	lesson = frappe.new_doc("Course Lesson")
-	lesson.update(
-		{
-			"title": title,
-			"chapter": chapter,
-			"course": course,
-		}
-	)
-	lesson.insert()
+    lesson = frappe.new_doc("Course Lesson")
+    lesson.update(
+        {
+            "title": title,
+            "chapter": chapter,
+            "course": course,
+        }
+    )
+    lesson.insert()
 
-	lesson_reference = frappe.new_doc("Lesson Reference")
-	lesson_reference.update(
-		{
-			"lesson": lesson.name,
-			"idx": idx,
-			"parent": chapter,
-			"parenttype": "Course Chapter",
-			"parentfield": "lessons",
-		}
-	)
-	lesson_reference.insert()
+    lesson_reference = frappe.new_doc("Lesson Reference")
+    lesson_reference.update(
+        {
+            "lesson": lesson.name,
+            "idx": idx,
+            "parent": chapter,
+            "parenttype": "Course Chapter",
+            "parentfield": "lessons",
+        }
+    )
+    lesson_reference.insert()
 
 
 @frappe.whitelist()
 def delete_chapter(chapter: str):
-	course = frappe.db.get_value("Course Chapter", chapter, "course")
-	if not can_modify_course(course):
-		frappe.throw(_("You do not have permission to delete this chapter."), frappe.PermissionError)
+    course = frappe.db.get_value("Course Chapter", chapter, "course")
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to delete this chapter."), frappe.PermissionError)
 
-	chapterInfo = frappe.db.get_value(
-		"Course Chapter", chapter, ["is_scorm_package", "scorm_package_path"], as_dict=True
-	)
+    chapterInfo = frappe.db.get_value(
+        "Course Chapter", chapter, ["is_scorm_package", "scorm_package_path"], as_dict=True
+    )
 
-	if chapterInfo.is_scorm_package:
-		delete_scorm_package(chapterInfo.scorm_package_path)
+    if chapterInfo.is_scorm_package:
+        delete_scorm_package(chapterInfo.scorm_package_path)
 
-	course = frappe.db.get_value("Chapter Reference", {"chapter": chapter}, "parent")
+    course = frappe.db.get_value(
+        "Chapter Reference", {"chapter": chapter}, "parent")
 
-	frappe.db.delete("Chapter Reference", {"chapter": chapter})
-	frappe.db.delete("Lesson Reference", {"parent": chapter})
-	frappe.db.delete("Course Lesson", {"chapter": chapter})
-	frappe.db.delete("Course Chapter", chapter)
+    frappe.db.delete("Chapter Reference", {"chapter": chapter})
+    frappe.db.delete("Lesson Reference", {"parent": chapter})
+    frappe.db.delete("Course Lesson", {"chapter": chapter})
+    frappe.db.delete("Course Chapter", chapter)
 
-	# reset chapter reference index after deletion
-	if course:
-		chapters = frappe.get_all(
-			"Chapter Reference", filters={"parent": course}, fields=["name"], order_by="idx asc"
-		)
+    # reset chapter reference index after deletion
+    if course:
+        chapters = frappe.get_all(
+            "Chapter Reference", filters={"parent": course}, fields=["name"], order_by="idx asc"
+        )
 
-		i = 1
-		for chapter in chapters:
-			frappe.db.set_value("Chapter Reference", chapter.name, "idx", i)
-			i += 1
+        i = 1
+        for chapter in chapters:
+            frappe.db.set_value("Chapter Reference", chapter.name, "idx", i)
+            i += 1
 
 
 def delete_scorm_package(scorm_package_path: str):
-	scorm_package_path = frappe.get_site_path("public", scorm_package_path[1:])
-	if os.path.exists(scorm_package_path):
-		shutil.rmtree(scorm_package_path)
+    scorm_package_path = frappe.get_site_path("public", scorm_package_path[1:])
+    if os.path.exists(scorm_package_path):
+        shutil.rmtree(scorm_package_path)
 
 
 @frappe.whitelist()
 def mark_lesson_progress(course: str, chapter_number: int, lesson_number: int):
-	chapter_name = frappe.get_value("Chapter Reference", {"parent": course, "idx": chapter_number}, "chapter")
-	lesson_name = frappe.get_value(
-		"Lesson Reference", {"parent": chapter_name, "idx": lesson_number}, "lesson"
-	)
-	save_progress(lesson_name, course)
+    chapter_name = frappe.get_value(
+        "Chapter Reference", {"parent": course, "idx": chapter_number}, "chapter")
+    lesson_name = frappe.get_value(
+        "Lesson Reference", {"parent": chapter_name,
+                             "idx": lesson_number}, "lesson"
+    )
+    save_progress(lesson_name, course)
 
 
 @frappe.whitelist()
 def get_heatmap_data(member: str, base_days: int = 200):
-	if not (has_course_instructor_role() or has_moderator_role() or has_evaluator_role()):
-		frappe.throw(_("You do not have permission to access heatmap data."), frappe.PermissionError)
+    if not (has_course_instructor_role() or has_moderator_role() or has_evaluator_role()):
+        frappe.throw(
+            _("You do not have permission to access heatmap data."), frappe.PermissionError)
 
-	base_date, start_date, number_of_days, days = calculate_date_ranges(base_days)
-	date_count = initialize_date_count(days)
+    base_date, start_date, number_of_days, days = calculate_date_ranges(
+        base_days)
+    date_count = initialize_date_count(days)
 
-	lesson_completions, quiz_submissions, assignment_submissions = fetch_activity_data(member, start_date)
-	count_dates(lesson_completions, date_count)
-	count_dates(quiz_submissions, date_count)
-	count_dates(assignment_submissions, date_count)
+    lesson_completions, quiz_submissions, assignment_submissions = fetch_activity_data(
+        member, start_date)
+    count_dates(lesson_completions, date_count)
+    count_dates(quiz_submissions, date_count)
+    count_dates(assignment_submissions, date_count)
 
-	heatmap_data, labels, total_activities, weeks = prepare_heatmap_data(
-		start_date, number_of_days, date_count
-	)
+    heatmap_data, labels, total_activities, weeks = prepare_heatmap_data(
+        start_date, number_of_days, date_count
+    )
 
-	return {
-		"heatmap_data": heatmap_data,
-		"labels": labels,
-		"total_activities": total_activities,
-		"weeks": weeks,
-	}
+    return {
+        "heatmap_data": heatmap_data,
+        "labels": labels,
+        "total_activities": total_activities,
+        "weeks": weeks,
+    }
 
 
 def calculate_date_ranges(base_days: int):
-	today = format_date(now(), "YYYY-MM-dd")
-	day_today = get_datetime(today).strftime("%w")
-	padding_end = 6 - cint(day_today)
+    today = format_date(now(), "YYYY-MM-dd")
+    day_today = get_datetime(today).strftime("%w")
+    padding_end = 6 - cint(day_today)
 
-	base_date = add_days(today, -base_days)
-	day_of_base_date = cint(get_datetime(base_date).strftime("%w"))
-	start_date = add_days(base_date, -day_of_base_date)
-	number_of_days = base_days + day_of_base_date + padding_end
-	days = [add_days(start_date, i) for i in range(number_of_days + 1)]
+    base_date = add_days(today, -base_days)
+    day_of_base_date = cint(get_datetime(base_date).strftime("%w"))
+    start_date = add_days(base_date, -day_of_base_date)
+    number_of_days = base_days + day_of_base_date + padding_end
+    days = [add_days(start_date, i) for i in range(number_of_days + 1)]
 
-	return base_date, start_date, number_of_days, days
+    return base_date, start_date, number_of_days, days
 
 
 def initialize_date_count(days: list):
-	return {format_date(day, "YYYY-MM-dd"): 0 for day in days}
+    return {format_date(day, "YYYY-MM-dd"): 0 for day in days}
 
 
 def fetch_activity_data(member: str, start_date: str):
-	lesson_completions = frappe.get_all(
-		"Course Progress",
-		fields=["creation"],
-		filters={"member": member, "creation": [">=", start_date], "status": "Complete"},
-	)
+    lesson_completions = frappe.get_all(
+        "Course Progress",
+        fields=["creation"],
+        filters={"member": member, "creation": [
+            ">=", start_date], "status": "Complete"},
+    )
 
-	quiz_submissions = frappe.get_all(
-		"Quiz Submission",
-		fields=["creation"],
-		filters={"member": member, "creation": [">=", start_date]},
-	)
+    quiz_submissions = frappe.get_all(
+        "Quiz Submission",
+        fields=["creation"],
+        filters={"member": member, "creation": [">=", start_date]},
+    )
 
-	assignment_submissions = frappe.get_all(
-		"Assignment Submission",
-		fields=["creation"],
-		filters={"member": member, "creation": [">=", start_date]},
-	)
+    assignment_submissions = frappe.get_all(
+        "Assignment Submission",
+        fields=["creation"],
+        filters={"member": member, "creation": [">=", start_date]},
+    )
 
-	return lesson_completions, quiz_submissions, assignment_submissions
+    return lesson_completions, quiz_submissions, assignment_submissions
 
 
 def count_dates(data: list, date_count: dict):
-	for entry in data:
-		date_value = format_date(entry.creation, "YYYY-MM-dd")
-		if date_value in date_count:
-			date_count[date_value] += 1
+    for entry in data:
+        date_value = format_date(entry.creation, "YYYY-MM-dd")
+        if date_value in date_count:
+            date_count[date_value] += 1
 
 
 def prepare_heatmap_data(start_date: str, number_of_days: int, date_count: dict):
-	days_of_week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-	heatmap_data = {day: [] for day in days_of_week}
-	week_count = -(number_of_days // -7)
-	labels = [None] * week_count
-	last_seen_month = None
-	sorted_dates = sorted(date_count.keys())
+    days_of_week = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    heatmap_data = {day: [] for day in days_of_week}
+    week_count = -(number_of_days // -7)
+    labels = [None] * week_count
+    last_seen_month = None
+    sorted_dates = sorted(date_count.keys())
 
-	for date_value in sorted_dates:
-		activity_count = date_count[date_value]
-		day_of_week = get_datetime(date_value).strftime("%a")
-		current_month = get_datetime(date_value).strftime("%b")
-		column_index = get_week_difference(start_date, date_value)
+    for date_value in sorted_dates:
+        activity_count = date_count[date_value]
+        day_of_week = get_datetime(date_value).strftime("%a")
+        current_month = get_datetime(date_value).strftime("%b")
+        column_index = get_week_difference(start_date, date_value)
 
-		if 0 <= column_index < week_count:
-			heatmap_data[day_of_week].append(
-				{
-					"date": date_value,
-					"count": activity_count,
-					"label": f"{activity_count} activities on {format_date(date_value, 'dd MMM')}",
-				}
-			)
+        if 0 <= column_index < week_count:
+            heatmap_data[day_of_week].append(
+                {
+                    "date": date_value,
+                    "count": activity_count,
+                    "label": f"{activity_count} activities on {format_date(date_value, 'dd MMM')}",
+                }
+            )
 
-			if last_seen_month != current_month:
-				labels[column_index] = current_month
-				last_seen_month = current_month
+            if last_seen_month != current_month:
+                labels[column_index] = current_month
+                last_seen_month = current_month
 
-	for index, label in enumerate(labels):
-		if not label:
-			labels[index] = ""
+    for index, label in enumerate(labels):
+        if not label:
+            labels[index] = ""
 
-	formatted_heatmap_data = [{"name": day, "data": heatmap_data[day]} for day in days_of_week]
+    formatted_heatmap_data = [
+        {"name": day, "data": heatmap_data[day]} for day in days_of_week]
 
-	total_activities = sum(date_count.values())
-	return formatted_heatmap_data, labels, total_activities, week_count
+    total_activities = sum(date_count.values())
+    return formatted_heatmap_data, labels, total_activities, week_count
 
 
 def get_week_difference(start_date: str, current_date: str) -> int:
-	diff_in_days = date_diff(current_date, start_date)
-	return diff_in_days // 7
+    diff_in_days = date_diff(current_date, start_date)
+    return diff_in_days // 7
 
 
 @frappe.whitelist()
 def get_notifications(filters: dict = None):
-	filters = frappe._dict(filters or {})
-	filters.for_user = frappe.session.user
-	notifications = frappe.get_all(
-		"Notification Log",
-		filters,
-		[
-			"subject",
-			"from_user",
-			"link",
-			"read",
-			"name",
-			"creation",
-			"document_type",
-			"document_name",
-			"type",
-			"email_content",
-		],
-		order_by="creation desc",
-	)
+    filters = frappe._dict(filters or {})
+    filters.for_user = frappe.session.user
+    notifications = frappe.get_all(
+        "Notification Log",
+        filters,
+        [
+            "subject",
+            "from_user",
+            "link",
+            "read",
+            "name",
+            "creation",
+            "document_type",
+            "document_name",
+            "type",
+            "email_content",
+        ],
+        order_by="creation desc",
+    )
 
-	for notification in notifications:
-		notification = update_document_details(notification)
-		notification = update_user_details(notification)
+    for notification in notifications:
+        notification = update_document_details(notification)
+        notification = update_user_details(notification)
 
-	return notifications
+    return notifications
 
 
 def update_user_details(notification: dict) -> dict:
-	if (
-		notification.document_details
-		and len(notification.document_details.get("instructors", []))
-		and not is_mention(notification)
-	):
-		from_user_details = notification.document_details["instructors"][0]
-	else:
-		from_user_details = frappe.db.get_value(
-			"User", notification.from_user, ["full_name", "user_image"], as_dict=1
-		)
-	notification["from_user_details"] = from_user_details
-	return notification
+    if (
+            notification.document_details
+            and len(notification.document_details.get("instructors", []))
+            and not is_mention(notification)
+    ):
+        from_user_details = notification.document_details["instructors"][0]
+    else:
+        from_user_details = frappe.db.get_value(
+            "User", notification.from_user, ["full_name", "user_image"], as_dict=1
+        )
+    notification["from_user_details"] = from_user_details
+    return notification
 
 
 def is_mention(notification: dict) -> bool:
-	if notification.type == "Mention":
-		return True
-	if "mentioned you" in notification.subject.lower():
-		return True
-	return False
+    if notification.type == "Mention":
+        return True
+    if "mentioned you" in notification.subject.lower():
+        return True
+    return False
 
 
 def update_document_details(notification: dict) -> dict:
-	if notification.document_type == "Course":
-		details = frappe.db.get_value(
-			"Course", notification.document_name, ["title", "video_link", "short_introduction"], as_dict=1
-		)
-		instructors = get_instructors("Course", notification.document_name)
-		details["instructors"] = instructors
-		notification["document_details"] = details
+    if notification.document_type == "Course":
+        details = frappe.db.get_value(
+            "Course", notification.document_name, ["title", "video_link", "short_introduction"], as_dict=1
+        )
+        instructors = get_instructors("Course", notification.document_name)
+        details["instructors"] = instructors
+        notification["document_details"] = details
 
-	elif notification.document_type == "Batch":
-		details = frappe.db.get_value(
-			"Batch",
-			notification.document_name,
-			[
-				"title",
-				"description as short_introduction",
-				"video_link",
-				"start_date",
-				"end_date",
-				"start_time",
-				"timezone",
-			],
-			as_dict=1,
-		)
-		instructors = get_instructors("Batch", notification.document_name)
-		details["instructors"] = instructors
-		notification["document_details"] = details
-	return notification
+    elif notification.document_type == "Batch":
+        details = frappe.db.get_value(
+            "Batch",
+            notification.document_name,
+            [
+                "title",
+                "description as short_introduction",
+                "video_link",
+                "start_date",
+                "end_date",
+                "start_time",
+                "timezone",
+            ],
+            as_dict=1,
+        )
+        instructors = get_instructors("Batch", notification.document_name)
+        details["instructors"] = instructors
+        notification["document_details"] = details
+    return notification
 
 
 @frappe.whitelist(allow_guest=True)
 def get_settings():
-	allowed_fields = [
-		"allow_guest_access",
-		"prevent_skipping_videos",
-		"contact_us_email",
-		"contact_us_url",
-		"livecode_url",
-		"disable_pwa",
-		"allow_job_posting",
-		"demo_data_present",
-	]
+    allowed_fields = [
+        "allow_guest_access",
+        "prevent_skipping_videos",
+        "contact_us_email",
+        "contact_us_url",
+        "livecode_url",
+        "disable_pwa",
+        "allow_job_posting",
+        "demo_data_present",
+    ]
 
-	settings = frappe._dict()
-	for field in allowed_fields:
-		settings[field] = frappe.get_cached_value("Settings", None, field)
+    settings = frappe._dict()
+    for field in allowed_fields:
+        settings[field] = frappe.get_cached_value("Settings", None, field)
 
-	return settings
+    return settings
 
 
 @frappe.whitelist()
 def cancel_evaluation(evaluation: dict):
-	evaluation = frappe._dict(evaluation)
-	if evaluation.member != frappe.session.user:
-		frappe.throw(_("You do not have permission to cancel this evaluation."), frappe.PermissionError)
+    evaluation = frappe._dict(evaluation)
+    if evaluation.member != frappe.session.user:
+        frappe.throw(
+            _("You do not have permission to cancel this evaluation."), frappe.PermissionError)
 
-	if not frappe.db.exists(
-		"Certificate Request",
-		{
-			"name": evaluation.name,
-			"member": frappe.session.user,
-		},
-	):
-		frappe.throw(_("You do not have permission to cancel this evaluation."), frappe.PermissionError)
+    if not frappe.db.exists(
+            "Certificate Request",
+            {
+                "name": evaluation.name,
+                "member": frappe.session.user,
+            },
+    ):
+        frappe.throw(
+            _("You do not have permission to cancel this evaluation."), frappe.PermissionError)
 
-	frappe.db.set_value("Certificate Request", evaluation.name, "status", "Cancelled")
-	events = frappe.get_all(
-		"Event Participants",
-		{
-			"email": evaluation.member,
-		},
-		["parent", "name"],
-	)
+    frappe.db.set_value("Certificate Request",
+                        evaluation.name, "status", "Cancelled")
+    events = frappe.get_all(
+        "Event Participants",
+        {
+            "email": evaluation.member,
+        },
+        ["parent", "name"],
+    )
 
-	for event in events:
-		info = frappe.db.get_value("Event", event.parent, ["starts_on", "subject"], as_dict=1)
-		date_value = str(info.starts_on).split(" ")[0]
+    for event in events:
+        info = frappe.db.get_value("Event", event.parent, [
+                                   "starts_on", "subject"], as_dict=1)
+        date_value = str(info.starts_on).split(" ")[0]
 
-		if date_value == str(evaluation.date.format("YYYY-MM-DD")) and evaluation.member_name in info.subject:
-			communication = frappe.db.get_value(
-				"Communication",
-				{"reference_doctype": "Event", "reference_name": event.parent},
-				"name",
-			)
-			if communication:
-				frappe.delete_doc("Communication", communication, ignore_permissions=True)
+        if date_value == str(evaluation.date.format("YYYY-MM-DD")) and evaluation.member_name in info.subject:
+            communication = frappe.db.get_value(
+                "Communication",
+                {"reference_doctype": "Event", "reference_name": event.parent},
+                "name",
+            )
+            if communication:
+                frappe.delete_doc(
+                    "Communication", communication, ignore_permissions=True)
 
-			frappe.delete_doc("Event Participants", event.name, ignore_permissions=True)
-			frappe.delete_doc("Event", event.parent, ignore_permissions=True)
+            frappe.delete_doc("Event Participants",
+                              event.name, ignore_permissions=True)
+            frappe.delete_doc("Event", event.parent, ignore_permissions=True)
 
 
 @frappe.whitelist()
 def get_certification_details(course: str):
-	membership = None
-	filters = {"course": course, "member": frappe.session.user}
+    membership = None
+    filters = {"course": course, "member": frappe.session.user}
 
-	if frappe.db.exists("Enrollment", filters):
-		membership = frappe.db.get_value(
-			"Enrollment",
-			filters,
-			["name", "purchased_certificate"],
-			as_dict=1,
-		)
+    if frappe.db.exists("Enrollment", filters):
+        membership = frappe.db.get_value(
+            "Enrollment",
+            filters,
+            ["name", "purchased_certificate"],
+            as_dict=1,
+        )
 
-	paid_certificate = frappe.db.get_value("Course", course, "paid_certificate")
-	certificate = frappe.db.get_value(
-		"Certificate",
-		{"member": frappe.session.user, "course": course},
-		["name", "template"],
-		as_dict=1,
-	)
+    paid_certificate = frappe.db.get_value(
+        "Course", course, "paid_certificate")
+    certificate = frappe.db.get_value(
+        "Certificate",
+        {"member": frappe.session.user, "course": course},
+        ["name", "template"],
+        as_dict=1,
+    )
 
-	return {
-		"membership": membership,
-		"paid_certificate": paid_certificate,
-		"certificate": certificate,
-	}
+    return {
+        "membership": membership,
+        "paid_certificate": paid_certificate,
+        "certificate": certificate,
+    }
 
 
 @frappe.whitelist()
 def save_role(user: str, role: str, value: int):
-	frappe.only_for("Moderator")
-	if role not in QUIZ_ROLES:
-		frappe.throw(_("You do not have permission to modify this role."), frappe.PermissionError)
+    frappe.only_for("Moderator")
+    if role not in QUIZ_ROLES:
+        frappe.throw(
+            _("You do not have permission to modify this role."), frappe.PermissionError)
 
-	if role == "Batch Evaluator":
-		return save_evaluator_role(user, value)
+    if role == "Batch Evaluator":
+        return save_evaluator_role(user, value)
 
-	if cint(value):
-		if not frappe.db.exists("Has Role", {"parent": user, "role": role}):
-			doc = frappe.new_doc("Has Role")
-			doc.parent = user
-			doc.parenttype = "User"
-			doc.parentfield = "roles"
-			doc.role = role
-			doc.save(ignore_permissions=True)
-	else:
-		frappe.db.delete("Has Role", {"parent": user, "role": role})
-	frappe.clear_cache(user=user)
-	return True
+    if cint(value):
+        if not frappe.db.exists("Has Role", {"parent": user, "role": role}):
+            doc = frappe.new_doc("Has Role")
+            doc.parent = user
+            doc.parenttype = "User"
+            doc.parentfield = "roles"
+            doc.role = role
+            doc.save(ignore_permissions=True)
+    else:
+        frappe.db.delete("Has Role", {"parent": user, "role": role})
+    frappe.clear_cache(user=user)
+    return True
 
 
 def save_evaluator_role(user: str, value: int):
-	frappe.only_for("Moderator")
-	if cint(value):
-		if not frappe.db.exists("Has Role", {"parent": user, "role": "Batch Evaluator"}):
-			doc = frappe.new_doc("Has Role")
-			doc.parent = user
-			doc.parenttype = "User"
-			doc.parentfield = "roles"
-			doc.role = "Batch Evaluator"
-			doc.save(ignore_permissions=True)
-		if not frappe.db.exists("Course Evaluator", {"evaluator": user}):
-			doc = frappe.new_doc("Course Evaluator")
-			doc.evaluator = user
-			doc.save(ignore_permissions=True)
-	else:
-		frappe.db.delete("Has Role", {"parent": user, "role": "Batch Evaluator"})
-		if frappe.db.exists("Course Evaluator", {"evaluator": user}):
-			frappe.db.delete("Course Evaluator", {"evaluator": user})
-	frappe.clear_cache(user=user)
-	return True
+    frappe.only_for("Moderator")
+    if cint(value):
+        if not frappe.db.exists("Has Role", {"parent": user, "role": "Batch Evaluator"}):
+            doc = frappe.new_doc("Has Role")
+            doc.parent = user
+            doc.parenttype = "User"
+            doc.parentfield = "roles"
+            doc.role = "Batch Evaluator"
+            doc.save(ignore_permissions=True)
+        if not frappe.db.exists("Course Evaluator", {"evaluator": user}):
+            doc = frappe.new_doc("Course Evaluator")
+            doc.evaluator = user
+            doc.save(ignore_permissions=True)
+    else:
+        frappe.db.delete(
+            "Has Role", {"parent": user, "role": "Batch Evaluator"})
+        if frappe.db.exists("Course Evaluator", {"evaluator": user}):
+            frappe.db.delete("Course Evaluator", {"evaluator": user})
+    frappe.clear_cache(user=user)
+    return True
 
 
 @frappe.whitelist()
 def capture_user_persona(responses: str):
-	frappe.only_for("System Manager")
-	data = frappe.parse_json(responses)
-	data = json.dumps(data)
-	response = frappe.integrations.utils.make_post_request(
-		"https://school.frappe.io/api/method/capture-persona",
-		data={"response": data},
-	)
-	if response.get("message").get("name"):
-		frappe.db.set_single_value("Settings", "persona_captured", True)
-	return response
+    frappe.only_for("System Manager")
+    data = frappe.parse_json(responses)
+    data = json.dumps(data)
+    response = frappe.integrations.utils.make_post_request(
+        "https://school.frappe.io/api/method/capture-persona",
+        data={"response": data},
+    )
+    if response.get("message").get("name"):
+        frappe.db.set_single_value("Settings", "persona_captured", True)
+    return response
 
 
 @frappe.whitelist()
 def get_meta_info(type: str, route: str):
-	if frappe.db.exists("Website Meta Tag", {"parent": f"{type}/{route}"}):
-		meta_tags = frappe.get_all(
-			"Website Meta Tag",
-			{
-				"parent": f"{type}/{route}",
-			},
-			["name", "key", "value"],
-		)
+    if frappe.db.exists("Website Meta Tag", {"parent": f"{type}/{route}"}):
+        meta_tags = frappe.get_all(
+            "Website Meta Tag",
+            {
+                "parent": f"{type}/{route}",
+            },
+            ["name", "key", "value"],
+        )
 
-		return meta_tags
+        return meta_tags
 
-	return []
+    return []
 
 
 @frappe.whitelist()
 def update_meta_info(meta_type: str, route: str, meta_tags: list):
-	frappe.only_for(["Course Creator", "Batch Evaluator", "Moderator"])
-	validate_meta_data_permissions(meta_type)
-	validate_meta_tags(meta_tags)
+    frappe.only_for(["Course Creator", "Batch Evaluator", "Moderator"])
+    validate_meta_data_permissions(meta_type)
+    validate_meta_tags(meta_tags)
 
-	parent_name = f"{meta_type}/{route}"
-	for tag in meta_tags:
-		existing_tag = frappe.db.exists(
-			"Website Meta Tag",
-			{
-				"parent": parent_name,
-				"parenttype": "Website Route Meta",
-				"parentfield": "meta_tags",
-				"key": tag["key"],
-			},
-		)
-		if existing_tag:
-			if not tag.get("value"):
-				frappe.db.delete("Website Meta Tag", existing_tag)
-				continue
-			frappe.db.set_value("Website Meta Tag", existing_tag, "value", tag["value"])
-		elif tag.get("value"):
-			tag_properties = {
-				"parent": parent_name,
-				"parenttype": "Website Route Meta",
-				"parentfield": "meta_tags",
-				"key": tag["key"],
-				"value": tag["value"],
-			}
+    parent_name = f"{meta_type}/{route}"
+    for tag in meta_tags:
+        existing_tag = frappe.db.exists(
+            "Website Meta Tag",
+            {
+                "parent": parent_name,
+                "parenttype": "Website Route Meta",
+                "parentfield": "meta_tags",
+                "key": tag["key"],
+            },
+        )
+        if existing_tag:
+            if not tag.get("value"):
+                frappe.db.delete("Website Meta Tag", existing_tag)
+                continue
+            frappe.db.set_value("Website Meta Tag",
+                                existing_tag, "value", tag["value"])
+        elif tag.get("value"):
+            tag_properties = {
+                "parent": parent_name,
+                "parenttype": "Website Route Meta",
+                "parentfield": "meta_tags",
+                "key": tag["key"],
+                "value": tag["value"],
+            }
 
-			parent_exists = frappe.db.exists("Website Route Meta", parent_name)
-			if not parent_exists:
-				create_meta(parent_name, tag_properties)
-			else:
-				create_meta_tag(tag_properties)
+            parent_exists = frappe.db.exists("Website Route Meta", parent_name)
+            if not parent_exists:
+                create_meta(parent_name, tag_properties)
+            else:
+                create_meta_tag(tag_properties)
 
 
 def validate_meta_tags(meta_tags: list):
-	if not isinstance(meta_tags, list):
-		frappe.throw(_("Meta tags should be a list."))
+    if not isinstance(meta_tags, list):
+        frappe.throw(_("Meta tags should be a list."))
 
 
 def create_meta(parent_name: str, tag_properties: dict):
-	route_meta = frappe.new_doc("Website Route Meta")
-	route_meta.update(
-		{
-			"__newname": parent_name,
-		}
-	)
-	route_meta.append("meta_tags", tag_properties)
-	route_meta.insert()
+    route_meta = frappe.new_doc("Website Route Meta")
+    route_meta.update(
+        {
+            "__newname": parent_name,
+        }
+    )
+    route_meta.append("meta_tags", tag_properties)
+    route_meta.insert()
 
 
 def create_meta_tag(tag_properties: dict):
-	new_tag = frappe.new_doc("Website Meta Tag")
-	new_tag.update(tag_properties)
-	new_tag.insert()
+    new_tag = frappe.new_doc("Website Meta Tag")
+    new_tag.update(tag_properties)
+    new_tag.insert()
 
 
 def validate_meta_data_permissions(meta_type: str):
-	roles = frappe.get_roles()
+    roles = frappe.get_roles()
 
-	if meta_type == "courses":
-		if not ("Course Creator" in roles or "Moderator" in roles):
-			frappe.throw(_("You do not have permission to update meta tags."))
+    if meta_type == "courses":
+        if not ("Course Creator" in roles or "Moderator" in roles):
+            frappe.throw(_("You do not have permission to update meta tags."))
 
-	elif meta_type == "batches":
-		if not ("Batch Evaluator" in roles or "Moderator" in roles):
-			frappe.throw(_("You do not have permission to update meta tags."))
+    elif meta_type == "batches":
+        if not ("Batch Evaluator" in roles or "Moderator" in roles):
+            frappe.throw(_("You do not have permission to update meta tags."))
 
 
 @frappe.whitelist()
 def create_programming_exercise_submission(exercise: str, submission: str, code: str, test_cases: list):
-	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
-	if submission == "new":
-		return make_new_exercise_submission(exercise, code, test_cases)
-	else:
-		update_exercise_submission(submission, code, test_cases)
+    frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
+    if submission == "new":
+        return make_new_exercise_submission(exercise, code, test_cases)
+    else:
+        update_exercise_submission(submission, code, test_cases)
 
 
 def make_new_exercise_submission(exercise: str, code: str, test_cases: list):
-	submission = frappe.new_doc("Programming Exercise Submission")
-	submission.exercise = exercise
-	submission.member = frappe.session.user
-	submission.code = code
+    submission = frappe.new_doc("Programming Exercise Submission")
+    submission.exercise = exercise
+    submission.member = frappe.session.user
+    submission.code = code
 
-	for test_case in test_cases:
-		submission.append(
-			"test_cases",
-			{
-				"input": test_case.get("input"),
-				"output": test_case.get("output"),
-				"expected_output": test_case.get("expected_output"),
-				"status": test_case.get("status", test_case.get("status", "Failed")),
-			},
-		)
+    for test_case in test_cases:
+        submission.append(
+            "test_cases",
+            {
+                "input": test_case.get("input"),
+                "output": test_case.get("output"),
+                "expected_output": test_case.get("expected_output"),
+                "status": test_case.get("status", test_case.get("status", "Failed")),
+            },
+        )
 
-	submission.status = get_exercise_status(test_cases)
-	submission.insert()
-	return submission.name
+    submission.status = get_exercise_status(test_cases)
+    submission.insert()
+    return submission.name
 
 
 def update_exercise_submission(submission: str, code: str, test_cases: list):
-	member = frappe.db.get_value("Programming Exercise Submission", submission, "member")
-	if member != frappe.session.user:
-		frappe.throw(_("You do not have permission to update this submission."), frappe.PermissionError)
+    member = frappe.db.get_value(
+        "Programming Exercise Submission", submission, "member")
+    if member != frappe.session.user:
+        frappe.throw(
+            _("You do not have permission to update this submission."), frappe.PermissionError)
 
-	update_test_cases(test_cases, submission)
-	status = get_exercise_status(test_cases)
-	frappe.db.set_value("Programming Exercise Submission", submission, {"status": status, "code": code})
+    update_test_cases(test_cases, submission)
+    status = get_exercise_status(test_cases)
+    frappe.db.set_value("Programming Exercise Submission",
+                        submission, {"status": status, "code": code})
 
 
 def get_exercise_status(test_cases: list):
-	if not test_cases:
-		return "Failed"
+    if not test_cases:
+        return "Failed"
 
-	if all(row.get("status", "Failed") == "Passed" for row in test_cases):
-		return "Passed"
-	else:
-		return "Failed"
+    if all(row.get("status", "Failed") == "Passed" for row in test_cases):
+        return "Passed"
+    else:
+        return "Failed"
 
 
 def update_test_cases(test_cases: list, submission: str):
-	frappe.db.delete("Test Case Submission", {"parent": submission})
-	for row in test_cases:
-		test_case = frappe.new_doc("Test Case Submission")
-		test_case.update(
-			{
-				"parent": submission,
-				"parenttype": "Programming Exercise Submission",
-				"parentfield": "test_cases",
-				"input": row.get("input"),
-				"output": row.get("output"),
-				"expected_output": row.get("expected_output"),
-				"status": row.get("status", "Failed"),
-			}
-		)
-		test_case.insert()
+    frappe.db.delete("Test Case Submission", {"parent": submission})
+    for row in test_cases:
+        test_case = frappe.new_doc("Test Case Submission")
+        test_case.update(
+            {
+                "parent": submission,
+                "parenttype": "Programming Exercise Submission",
+                "parentfield": "test_cases",
+                "input": row.get("input"),
+                "output": row.get("output"),
+                "expected_output": row.get("expected_output"),
+                "status": row.get("status", "Failed"),
+            }
+        )
+        test_case.insert()
 
 
 @frappe.whitelist()
 def track_video_watch_duration(lesson: str, videos: list):
-	"""
-	Track the watch duration of videos in a lesson.
-	"""
-	if not isinstance(videos, list):
-		videos = json.loads(videos)
+    """
+    Track the watch duration of videos in a lesson.
+    """
+    if not isinstance(videos, list):
+        videos = json.loads(videos)
 
-	for video in videos:
-		filters = {
-			"lesson": lesson,
-			"source": video.get("source"),
-			"member": frappe.session.user,
-		}
-		existing_record = frappe.db.get_value(
-			"Video Watch Duration", filters, ["name", "watch_time"], as_dict=True
-		)
-		if existing_record and flt(existing_record.watch_time) < flt(video.get("watch_time")):
-			frappe.db.set_value(
-				"Video Watch Duration",
-				filters,
-				"watch_time",
-				video.get("watch_time"),
-			)
-		elif not existing_record:
-			track_new_watch_time(lesson, video)
+    for video in videos:
+        filters = {
+            "lesson": lesson,
+            "source": video.get("source"),
+            "member": frappe.session.user,
+        }
+        existing_record = frappe.db.get_value(
+            "Video Watch Duration", filters, ["name", "watch_time"], as_dict=True
+        )
+        if existing_record and flt(existing_record.watch_time) < flt(video.get("watch_time")):
+            frappe.db.set_value(
+                "Video Watch Duration",
+                filters,
+                "watch_time",
+                video.get("watch_time"),
+            )
+        elif not existing_record:
+            track_new_watch_time(lesson, video)
 
 
 def track_new_watch_time(lesson: str, video: dict):
-	doc = frappe.new_doc("Video Watch Duration")
-	doc.lesson = lesson
-	doc.source = video.get("source")
-	doc.watch_time = video.get("watch_time")
-	doc.member = frappe.session.user
-	doc.save()
+    doc = frappe.new_doc("Video Watch Duration")
+    doc.lesson = lesson
+    doc.source = video.get("source")
+    doc.watch_time = video.get("watch_time")
+    doc.member = frappe.session.user
+    doc.save()
 
 
 @frappe.whitelist()
 def get_course_progress_distribution(course: str):
-	if not can_modify_course(course):
-		frappe.throw(
-			_("You do not have permission to access this course's progress data."), frappe.PermissionError
-		)
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to access this course's progress data."), frappe.PermissionError
+        )
 
-	all_progress = frappe.get_all(
-		"Enrollment",
-		{
-			"course": course,
-		},
-		pluck="progress",
-	)
+    all_progress = frappe.get_all(
+        "Enrollment",
+        {
+            "course": course,
+        },
+        pluck="progress",
+    )
 
-	average_progress = get_average_course_progress(all_progress)
-	progress_distribution = get_progress_distribution(all_progress)
+    average_progress = get_average_course_progress(all_progress)
+    progress_distribution = get_progress_distribution(all_progress)
 
-	return {
-		"average_progress": average_progress,
-		"progress_distribution": progress_distribution,
-	}
+    return {
+        "average_progress": average_progress,
+        "progress_distribution": progress_distribution,
+    }
 
 
 def get_average_course_progress(progress_list: list):
-	if not progress_list:
-		return 0
-	average_progress = sum(progress_list) / len(progress_list)
-	return flt(average_progress, frappe.get_system_settings("float_precision") or 3)
+    if not progress_list:
+        return 0
+    average_progress = sum(progress_list) / len(progress_list)
+    return flt(average_progress, frappe.get_system_settings("float_precision") or 3)
 
 
 def get_progress_distribution(progressList: list):
-	distribution = [
-		{
-			"name": "Just Started (0-30%)",
-			"value": len([p for p in progressList if 0 <= p < 30]),
-		},
-		{
-			"name": "In Progress (30-60%)",
-			"value": len([p for p in progressList if 30 <= p < 60]),
-		},
-		{
-			"name": "Advanced (60-99%)",
-			"value": len([p for p in progressList if 60 <= p < 100]),
-		},
-		{
-			"name": "Completed (100%)",
-			"value": len([p for p in progressList if p == 100]),
-		},
-	]
+    distribution = [
+        {
+            "name": "Just Started (0-30%)",
+            "value": len([p for p in progressList if 0 <= p < 30]),
+        },
+        {
+            "name": "In Progress (30-60%)",
+            "value": len([p for p in progressList if 30 <= p < 60]),
+        },
+        {
+            "name": "Advanced (60-99%)",
+            "value": len([p for p in progressList if 60 <= p < 100]),
+        },
+        {
+            "name": "Completed (100%)",
+            "value": len([p for p in progressList if p == 100]),
+        },
+    ]
 
-	return distribution
+    return distribution
 
 
 @frappe.whitelist(allow_guest=True)
 def get_pwa_manifest():
-	title = frappe.db.get_single_value("Website Settings", "app_name") or "Frappe Learning"
-	banner_image = frappe.db.get_single_value("Website Settings", "banner_image")
+    title = frappe.db.get_single_value(
+        "Website Settings", "app_name") or "Frappe Learning"
+    banner_image = frappe.db.get_single_value(
+        "Website Settings", "banner_image")
 
-	manifest = {
-		"name": title,
-		"short_name": title,
-		"description": "Easy to use, 100% open source Learning Management System",
-		"start_url": get_quiz_route(),
-		"icons": [
-			{
-				"src": banner_image or "/assets/quiz_crm/frontend/manifest/manifest-icon-192.maskable.png",
-				"sizes": "192x192",
-				"type": "image/png",
-				"purpose": "maskable any",
-			}
-		],
-	}
+    manifest = {
+        "name": title,
+        "short_name": title,
+        "description": "Easy to use, 100% open source Learning Management System",
+        "start_url": get_quiz_route(),
+        "icons": [
+            {
+                "src": banner_image or "/assets/quiz_crm/frontend/manifest/manifest-icon-192.maskable.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "maskable any",
+            }
+        ],
+    }
 
-	return Response(json.dumps(manifest), status=200, content_type="application/manifest+json")
+    return Response(json.dumps(manifest), status=200, content_type="application/manifest+json")
 
 
 @frappe.whitelist()
 def get_profile_details(username: str):
-	details = frappe.db.get_value(
-		"User",
-		{"username": username},
-		[
-			"first_name",
-			"last_name",
-			"full_name",
-			"name",
-			"username",
-			"user_image",
-			"bio",
-			"headline",
-			"language",
-			"cover_image",
-			"open_to",
-			"linkedin",
-			"github",
-			"twitter",
-		],
-		as_dict=True,
-	)
-	roles = frappe.get_roles(details.name)
-	if not has_quiz_role():
-		frappe.throw(
-			_("User does not have permission to access this user's profile details."), frappe.PermissionError
-		)
-	details.roles = roles
-	return details
+    details = frappe.db.get_value(
+        "User",
+        {"username": username},
+        [
+            "first_name",
+            "last_name",
+            "full_name",
+            "name",
+            "username",
+            "user_image",
+            "bio",
+            "headline",
+            "language",
+            "cover_image",
+            "open_to",
+            "linkedin",
+            "github",
+            "twitter",
+        ],
+        as_dict=True,
+    )
+    roles = frappe.get_roles(details.name)
+    if not has_quiz_role():
+        frappe.throw(
+            _("User does not have permission to access this user's profile details."), frappe.PermissionError
+        )
+    details.roles = roles
+    return details
 
 
 @frappe.whitelist()
 def get_streak_info():
-	all_dates = fetch_activity_dates(frappe.session.user)
-	streak, longest_streak = calculate_streaks(all_dates)
-	current_streak = calculate_current_streak(all_dates, streak)
+    all_dates = fetch_activity_dates(frappe.session.user)
+    streak, longest_streak = calculate_streaks(all_dates)
+    current_streak = calculate_current_streak(all_dates, streak)
 
-	return {
-		"current_streak": current_streak,
-		"longest_streak": longest_streak,
-	}
+    return {
+        "current_streak": current_streak,
+        "longest_streak": longest_streak,
+    }
 
 
 def fetch_activity_dates(user: str):
-	doctypes = [
-		"Course Progress",
-		"Quiz Submission",
-		"Assignment Submission",
-		"Programming Exercise Submission",
-	]
+    doctypes = [
+        "Course Progress",
+        "Quiz Submission",
+        "Assignment Submission",
+        "Programming Exercise Submission",
+    ]
 
-	all_dates = []
-	for dt in doctypes:
-		all_dates.extend(frappe.get_all(dt, {"member": user}, pluck="creation"))
+    all_dates = []
+    for dt in doctypes:
+        all_dates.extend(frappe.get_all(
+            dt, {"member": user}, pluck="creation"))
 
-	return sorted({d.date() if hasattr(d, "date") else d for d in all_dates})
+    return sorted({d.date() if hasattr(d, "date") else d for d in all_dates})
 
 
 def calculate_streaks(all_dates: list):
-	streak = 0
-	longest_streak = 0
-	prev_day = None
+    streak = 0
+    longest_streak = 0
+    prev_day = None
 
-	for d in all_dates:
-		if d.weekday() in (5, 6):
-			continue
+    for d in all_dates:
+        if d.weekday() in (5, 6):
+            continue
 
-		if prev_day:
-			expected = prev_day + timedelta(days=1)
-			while expected.weekday() in (5, 6):
-				expected += timedelta(days=1)
+        if prev_day:
+            expected = prev_day + timedelta(days=1)
+            while expected.weekday() in (5, 6):
+                expected += timedelta(days=1)
 
-			streak = streak + 1 if d == expected else 1
-		else:
-			streak = 1
+            streak = streak + 1 if d == expected else 1
+        else:
+            streak = 1
 
-		longest_streak = max(longest_streak, streak)
-		prev_day = d
+        longest_streak = max(longest_streak, streak)
+        prev_day = d
 
-	return streak, longest_streak
+    return streak, longest_streak
 
 
 def calculate_current_streak(all_dates: list, streak: int):
-	if not all_dates:
-		return 0
+    if not all_dates:
+        return 0
 
-	last_date = all_dates[-1]
-	today = getdate()
+    last_date = all_dates[-1]
+    today = getdate()
 
-	ref_day = today
-	while ref_day.weekday() in (5, 6):
-		ref_day -= timedelta(days=1)
+    ref_day = today
+    while ref_day.weekday() in (5, 6):
+        ref_day -= timedelta(days=1)
 
-	if last_date == ref_day or last_date == ref_day - timedelta(days=1):
-		return streak
-	return 0
+    if last_date == ref_day or last_date == ref_day - timedelta(days=1):
+        return streak
+    return 0
 
 
 @frappe.whitelist()
 def get_my_live_classes():
-	my_live_classes = []
+    my_live_classes = []
 
-	batches = frappe.get_all(
-		"Batch Enrollment",
-		{
-			"member": frappe.session.user,
-		},
-		order_by="creation desc",
-		pluck="batch",
-	)
+    batches = frappe.get_all(
+        "Batch Enrollment",
+        {
+            "member": frappe.session.user,
+        },
+        order_by="creation desc",
+        pluck="batch",
+    )
 
-	live_class_details = frappe.get_all(
-		"Live Class",
-		filters={
-			"date": [">=", getdate()],
-			"batch_name": ["in", batches],
-		},
-		fields=[
-			"name",
-			"title",
-			"description",
-			"time",
-			"date",
-			"duration",
-			"attendees",
-			"start_url",
-			"join_url",
-			"owner",
-		],
-		limit=2,
-		order_by="date",
-	)
+    live_class_details = frappe.get_all(
+        "Live Class",
+        filters={
+            "date": [">=", getdate()],
+            "batch_name": ["in", batches],
+        },
+        fields=[
+            "name",
+            "title",
+            "description",
+            "time",
+            "date",
+            "duration",
+            "attendees",
+            "start_url",
+            "join_url",
+            "owner",
+        ],
+        limit=2,
+        order_by="date",
+    )
 
-	if len(live_class_details):
-		for live_class in live_class_details:
-			live_class.course_title = frappe.db.get_value("Course", live_class.course, "title")
+    if len(live_class_details):
+        for live_class in live_class_details:
+            live_class.course_title = frappe.db.get_value(
+                "Course", live_class.course, "title")
 
-			my_live_classes.append(live_class)
+            my_live_classes.append(live_class)
 
-	return my_live_classes
+    return my_live_classes
 
 
 @frappe.whitelist()
 def get_created_courses():
-	created_courses = []
-	roles = frappe.get_roles()
+    created_courses = []
+    roles = frappe.get_roles()
 
-	CourseInstructor = frappe.qb.DocType("Course Instructor")
-	Course = frappe.qb.DocType("Course")
+    CourseInstructor = frappe.qb.DocType("Course Instructor")
+    Course = frappe.qb.DocType("Course")
 
-	base_query = (
-		frappe.qb.from_(CourseInstructor)
-		.join(Course)
-		.on(CourseInstructor.parent == Course.name)
-		.select(Course.name)
-		.orderby(Course.published_on, order=frappe.qb.desc)
-		.limit(3)
-	)
+    base_query = (
+        frappe.qb.from_(CourseInstructor)
+        .join(Course)
+        .on(CourseInstructor.parent == Course.name)
+        .select(Course.name)
+        .orderby(Course.published_on, order=frappe.qb.desc)
+        .limit(3)
+    )
 
-	query = base_query.where(CourseInstructor.instructor == frappe.session.user)
-	results = query.run(as_dict=True)
+    query = base_query.where(
+        CourseInstructor.instructor == frappe.session.user)
+    results = query.run(as_dict=True)
 
-	if not len(results) and ("Moderator" in roles):
-		results = base_query.run(as_dict=True)
+    if not len(results) and ("Moderator" in roles):
+        results = base_query.run(as_dict=True)
 
-	courses = [row["name"] for row in results]
-	for course in courses:
-		course_details = get_course_details(course)
-		created_courses.append(course_details)
+    courses = [row["name"] for row in results]
+    for course in courses:
+        course_details = get_course_details(course)
+        created_courses.append(course_details)
 
-	return created_courses
+    return created_courses
 
 
 @frappe.whitelist()
 def get_created_batches():
-	created_batches = []
+    created_batches = []
 
-	CourseInstructor = frappe.qb.DocType("Course Instructor")
-	Batch = frappe.qb.DocType("Batch")
+    CourseInstructor = frappe.qb.DocType("Course Instructor")
+    Batch = frappe.qb.DocType("Batch")
 
-	query = (
-		frappe.qb.from_(CourseInstructor)
-		.join(Batch)
-		.on(CourseInstructor.parent == Batch.name)
-		.select(Batch.name)
-		.where(CourseInstructor.instructor == frappe.session.user)
-		.where(Batch.start_date >= getdate())
-		.orderby(Batch.start_date, order=frappe.qb.asc)
-		.limit(4)
-	)
+    query = (
+        frappe.qb.from_(CourseInstructor)
+        .join(Batch)
+        .on(CourseInstructor.parent == Batch.name)
+        .select(Batch.name)
+        .where(CourseInstructor.instructor == frappe.session.user)
+        .where(Batch.start_date >= getdate())
+        .orderby(Batch.start_date, order=frappe.qb.asc)
+        .limit(4)
+    )
 
-	results = query.run(as_dict=True)
-	batches = [row["name"] for row in results]
+    results = query.run(as_dict=True)
+    batches = [row["name"] for row in results]
 
-	for batch in batches:
-		batch_details = get_batch_details(batch)
-		created_batches.append(batch_details)
+    for batch in batches:
+        batch_details = get_batch_details(batch)
+        created_batches.append(batch_details)
 
-	return created_batches
+    return created_batches
 
 
 @frappe.whitelist()
 def get_admin_live_classes():
-	CourseInstructor = frappe.qb.DocType("Course Instructor")
-	LiveClass = frappe.qb.DocType("Live Class")
+    CourseInstructor = frappe.qb.DocType("Course Instructor")
+    LiveClass = frappe.qb.DocType("Live Class")
 
-	query = (
-		frappe.qb.from_(CourseInstructor)
-		.join(LiveClass)
-		.on(CourseInstructor.parent == LiveClass.batch_name)
-		.select(
-			LiveClass.name,
-			LiveClass.title,
-			LiveClass.description,
-			LiveClass.time,
-			LiveClass.date,
-			LiveClass.duration,
-			LiveClass.attendees,
-			LiveClass.start_url,
-			LiveClass.join_url,
-			LiveClass.owner,
-		)
-		.where(CourseInstructor.instructor == frappe.session.user)
-		.where(LiveClass.date >= getdate())
-		.orderby(LiveClass.date, order=frappe.qb.asc)
-		.limit(4)
-	)
-	results = query.run(as_dict=True)
-	return results
+    query = (
+        frappe.qb.from_(CourseInstructor)
+        .join(LiveClass)
+        .on(CourseInstructor.parent == LiveClass.batch_name)
+        .select(
+            LiveClass.name,
+            LiveClass.title,
+            LiveClass.description,
+            LiveClass.time,
+            LiveClass.date,
+            LiveClass.duration,
+            LiveClass.attendees,
+            LiveClass.start_url,
+            LiveClass.join_url,
+            LiveClass.owner,
+        )
+        .where(CourseInstructor.instructor == frappe.session.user)
+        .where(LiveClass.date >= getdate())
+        .orderby(LiveClass.date, order=frappe.qb.asc)
+        .limit(4)
+    )
+    results = query.run(as_dict=True)
+    return results
 
 
 @frappe.whitelist()
 def get_admin_evals():
-	evals = frappe.get_all(
-		"Certificate Request",
-		{
-			"evaluator": frappe.session.user,
-			"date": [">=", getdate()],
-			"status": "Upcoming",
-		},
-		[
-			"name",
-			"date",
-			"start_time",
-			"course",
-			"evaluator",
-			"google_meet_link",
-			"member",
-			"member_name",
-		],
-		limit=4,
-		order_by="date asc",
-	)
+    evals = frappe.get_all(
+        "Certificate Request",
+        {
+            "evaluator": frappe.session.user,
+            "date": [">=", getdate()],
+            "status": "Upcoming",
+        },
+        [
+            "name",
+            "date",
+            "start_time",
+            "course",
+            "evaluator",
+            "google_meet_link",
+            "member",
+            "member_name",
+        ],
+        limit=4,
+        order_by="date asc",
+    )
 
-	for evaluation in evals:
-		evaluation.course_title = frappe.db.get_value("Course", evaluation.course, "title")
+    for evaluation in evals:
+        evaluation.course_title = frappe.db.get_value(
+            "Course", evaluation.course, "title")
 
-	return evals
+    return evals
 
 
 @frappe.whitelist()
 def get_my_courses():
-	my_courses = []
-	courses = get_my_latest_courses()
+    my_courses = []
+    courses = get_my_latest_courses()
 
-	if not len(courses):
-		courses = get_featured_home_courses()
+    if not len(courses):
+        courses = get_featured_home_courses()
 
-	if not len(courses):
-		courses = get_popular_courses()
+    if not len(courses):
+        courses = get_popular_courses()
 
-	for course in courses:
-		my_courses.append(get_course_details(course))
+    for course in courses:
+        my_courses.append(get_course_details(course))
 
-	return my_courses
+    return my_courses
 
 
 def get_my_latest_courses():
-	return frappe.get_all(
-		"Enrollment",
-		{
-			"member": frappe.session.user,
-		},
-		order_by="modified desc",
-		limit=3,
-		pluck="course",
-	)
+    return frappe.get_all(
+        "Enrollment",
+        {
+            "member": frappe.session.user,
+        },
+        order_by="modified desc",
+        limit=3,
+        pluck="course",
+    )
 
 
 def get_featured_home_courses():
-	return frappe.get_all(
-		"Course",
-		{"published": 1, "featured": 1},
-		order_by="published_on desc",
-		limit=3,
-		pluck="name",
-	)
+    return frappe.get_all(
+        "Course",
+        {"published": 1, "featured": 1},
+        order_by="published_on desc",
+        limit=3,
+        pluck="name",
+    )
 
 
 def get_popular_courses():
-	return frappe.get_all(
-		"Course",
-		{
-			"published": 1,
-		},
-		order_by="enrollments desc",
-		limit=3,
-		pluck="name",
-	)
+    return frappe.get_all(
+        "Course",
+        {
+            "published": 1,
+        },
+        order_by="enrollments desc",
+        limit=3,
+        pluck="name",
+    )
 
 
 @frappe.whitelist()
 def get_my_batches():
-	my_batches = []
-	batches = get_my_latest_batches()
+    my_batches = []
+    batches = get_my_latest_batches()
 
-	if not len(batches):
-		batches = get_upcoming_batches()
+    if not len(batches):
+        batches = get_upcoming_batches()
 
-	for batch in batches:
-		batch_details = get_batch_details(batch)
-		if batch_details:
-			my_batches.append(batch_details)
+    for batch in batches:
+        batch_details = get_batch_details(batch)
+        if batch_details:
+            my_batches.append(batch_details)
 
-	return my_batches
+    return my_batches
 
 
 def get_my_latest_batches():
-	return frappe.get_all(
-		"Batch Enrollment",
-		{
-			"member": frappe.session.user,
-		},
-		order_by="creation desc",
-		limit=4,
-		pluck="batch",
-	)
+    return frappe.get_all(
+        "Batch Enrollment",
+        {
+            "member": frappe.session.user,
+        },
+        order_by="creation desc",
+        limit=4,
+        pluck="batch",
+    )
 
 
 def get_upcoming_batches():
-	return frappe.get_all(
-		"Batch",
-		{
-			"published": 1,
-			"start_date": [">=", getdate()],
-		},
-		order_by="start_date asc",
-		limit=4,
-		pluck="name",
-	)
+    return frappe.get_all(
+        "Batch",
+        {
+            "published": 1,
+            "start_date": [">=", getdate()],
+        },
+        order_by="start_date asc",
+        limit=4,
+        pluck="name",
+    )
 
 
 @frappe.whitelist()
 def delete_programming_exercise(exercise: str):
-	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
-	frappe.db.delete("Programming Exercise Submission", {"exercise": exercise})
-	frappe.db.delete("Programming Exercise", exercise)
+    frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
+    frappe.db.delete("Programming Exercise Submission", {"exercise": exercise})
+    frappe.db.delete("Programming Exercise", exercise)
 
 
 @frappe.whitelist()
 def get_lesson_completion_stats(course: str):
-	roles = frappe.get_roles()
-	if "Course Creator" not in roles and "Moderator" not in roles:
-		frappe.throw(_("You do not have permission to access lesson completion stats."))
+    roles = frappe.get_roles()
+    if "Course Creator" not in roles and "Moderator" not in roles:
+        frappe.throw(
+            _("You do not have permission to access lesson completion stats."))
 
-	CourseProgress = frappe.qb.DocType("Course Progress")
-	LessonReference = frappe.qb.DocType("Lesson Reference")
-	ChapterReference = frappe.qb.DocType("Chapter Reference")
-	Lesson = frappe.qb.DocType("Course Lesson")
+    CourseProgress = frappe.qb.DocType("Course Progress")
+    LessonReference = frappe.qb.DocType("Lesson Reference")
+    ChapterReference = frappe.qb.DocType("Chapter Reference")
+    Lesson = frappe.qb.DocType("Course Lesson")
 
-	rows = (
-		frappe.qb.from_(LessonReference)
-		.join(ChapterReference)
-		.on(LessonReference.parent == ChapterReference.chapter)
-		.join(Lesson)
-		.on(LessonReference.lesson == Lesson.name)
-		.left_join(CourseProgress)
-		.on(
-			(CourseProgress.lesson == LessonReference.lesson)
-			& (CourseProgress.course == course)
-			& (CourseProgress.status == "Complete")
-		)
-		.select(
-			LessonReference.idx,
-			ChapterReference.idx.as_("chapter_idx"),
-			CourseProgress.lesson,
-			Lesson.title,
-			Lesson.name.as_("lesson_name"),
-			fn.Count(CourseProgress.name).as_("completion_count"),
-		)
-		.where(ChapterReference.parent == course)
-		.groupby(LessonReference.lesson)
-		.orderby(ChapterReference.idx, LessonReference.idx)
-		.run(as_dict=True)
-	)
+    rows = (
+        frappe.qb.from_(LessonReference)
+        .join(ChapterReference)
+        .on(LessonReference.parent == ChapterReference.chapter)
+        .join(Lesson)
+        .on(LessonReference.lesson == Lesson.name)
+        .left_join(CourseProgress)
+        .on(
+            (CourseProgress.lesson == LessonReference.lesson)
+            & (CourseProgress.course == course)
+            & (CourseProgress.status == "Complete")
+        )
+        .select(
+            LessonReference.idx,
+            ChapterReference.idx.as_("chapter_idx"),
+            CourseProgress.lesson,
+            Lesson.title,
+            Lesson.name.as_("lesson_name"),
+            fn.Count(CourseProgress.name).as_("completion_count"),
+        )
+        .where(ChapterReference.parent == course)
+        .groupby(LessonReference.lesson)
+        .orderby(ChapterReference.idx, LessonReference.idx)
+        .run(as_dict=True)
+    )
 
-	return rows
+    return rows
 
 
 @frappe.whitelist()
 def get_course_assessment_progress(course: str, member: str):
-	if not can_modify_course(course):
-		frappe.throw(
-			_("You do not have permission to access this course's assessment data."), frappe.PermissionError
-		)
+    if not can_modify_course(course):
+        frappe.throw(
+            _("You do not have permission to access this course's assessment data."), frappe.PermissionError
+        )
 
-	quizzes = get_course_quiz_progress(course, member)
-	assignments = get_course_assignment_progress(course, member)
-	programming_exercises = get_course_programming_exercise_progress(course, member)
+    quizzes = get_course_quiz_progress(course, member)
+    assignments = get_course_assignment_progress(course, member)
+    programming_exercises = get_course_programming_exercise_progress(
+        course, member)
 
-	return {
-		"quizzes": quizzes,
-		"assignments": assignments,
-		"exercises": programming_exercises,
-	}
+    return {
+        "quizzes": quizzes,
+        "assignments": assignments,
+        "exercises": programming_exercises,
+    }
 
 
 def get_course_quiz_progress(course: str, member: str):
-	quizzes = get_assessment_from_lesson(course, "quiz")
-	attempts = []
+    quizzes = get_assessment_from_lesson(course, "quiz")
+    attempts = []
 
-	for quiz in quizzes:
-		submissions = frappe.get_all(
-			"Quiz Submission",
-			{
-				"quiz": quiz,
-				"member": member,
-			},
-			["name", "score", "percentage", "quiz", "quiz_title"],
-			order_by="creation desc",
-			limit=1,
-		)
-		if len(submissions):
-			attempts.append(submissions[0])
-		else:
-			attempts.append(
-				{
-					"quiz": quiz,
-					"quiz_title": frappe.db.get_value("Quiz", quiz, "title"),
-					"score": 0,
-					"percentage": 0,
-				}
-			)
+    for quiz in quizzes:
+        submissions = frappe.get_all(
+            "Quiz Submission",
+            {
+                "quiz": quiz,
+                "member": member,
+            },
+            ["name", "score", "percentage", "quiz", "quiz_title"],
+            order_by="creation desc",
+            limit=1,
+        )
+        if len(submissions):
+            attempts.append(submissions[0])
+        else:
+            attempts.append(
+                {
+                    "quiz": quiz,
+                    "quiz_title": frappe.db.get_value("Quiz", quiz, "title"),
+                    "score": 0,
+                    "percentage": 0,
+                }
+            )
 
-	return attempts
+    return attempts
 
 
 def get_course_assignment_progress(course: str, member: str):
-	assignments = get_assessment_from_lesson(course, "assignment")
-	submissions = []
+    assignments = get_assessment_from_lesson(course, "assignment")
+    submissions = []
 
-	for assignment in assignments:
-		assignment_subs = frappe.get_all(
-			"Assignment Submission",
-			{
-				"assignment": assignment,
-				"member": member,
-			},
-			["name", "status", "assignment", "assignment_title"],
-			order_by="creation desc",
-			limit=1,
-		)
-		if len(assignment_subs):
-			submissions.append(assignment_subs[0])
-		else:
-			submissions.append(
-				{
-					"assignment": assignment,
-					"assignment_title": frappe.db.get_value("Assignment", assignment, "title"),
-					"status": "Not Submitted",
-				}
-			)
+    for assignment in assignments:
+        assignment_subs = frappe.get_all(
+            "Assignment Submission",
+            {
+                "assignment": assignment,
+                "member": member,
+            },
+            ["name", "status", "assignment", "assignment_title"],
+            order_by="creation desc",
+            limit=1,
+        )
+        if len(assignment_subs):
+            submissions.append(assignment_subs[0])
+        else:
+            submissions.append(
+                {
+                    "assignment": assignment,
+                    "assignment_title": frappe.db.get_value("Assignment", assignment, "title"),
+                    "status": "Not Submitted",
+                }
+            )
 
-	return submissions
+    return submissions
 
 
 def get_course_programming_exercise_progress(course: str, member: str):
-	exercises = get_assessment_from_lesson(course, "program")
-	submissions = []
+    exercises = get_assessment_from_lesson(course, "program")
+    submissions = []
 
-	for exercise in exercises:
-		exercise_subs = frappe.get_all(
-			"Programming Exercise Submission",
-			{
-				"exercise": exercise,
-				"member": member,
-			},
-			["name", "status", "exercise", "exercise_title"],
-			order_by="creation desc",
-			limit=1,
-		)
-		if len(exercise_subs):
-			submissions.append(exercise_subs[0])
-		else:
-			submissions.append(
-				{
-					"exercise": exercise,
-					"exercise_title": frappe.db.get_value("Programming Exercise", exercise, "title"),
-					"status": "Not Attempted",
-				}
-			)
+    for exercise in exercises:
+        exercise_subs = frappe.get_all(
+            "Programming Exercise Submission",
+            {
+                "exercise": exercise,
+                "member": member,
+            },
+            ["name", "status", "exercise", "exercise_title"],
+            order_by="creation desc",
+            limit=1,
+        )
+        if len(exercise_subs):
+            submissions.append(exercise_subs[0])
+        else:
+            submissions.append(
+                {
+                    "exercise": exercise,
+                    "exercise_title": frappe.db.get_value("Programming Exercise", exercise, "title"),
+                    "status": "Not Attempted",
+                }
+            )
 
-	return submissions
+    return submissions
 
 
 def get_assessment_from_lesson(course: str, assessment_type: str):
-	assessments = []
-	lessons = frappe.get_all("Course Lesson", {"course": course}, ["name", "title", "content"])
+    assessments = []
+    lessons = frappe.get_all("Course Lesson", {"course": course}, [
+                             "name", "title", "content"])
 
-	for lesson in lessons:
-		if lesson.content:
-			content = json.loads(lesson.content)
-			for block in content.get("blocks", []):
-				if block.get("type") == assessment_type:
-					data_field = "exercise" if assessment_type == "program" else assessment_type
-					assessment_name = block.get("data", {}).get(data_field)
-					assessments.append(assessment_name)
+    for lesson in lessons:
+        if lesson.content:
+            content = json.loads(lesson.content)
+            for block in content.get("blocks", []):
+                if block.get("type") == assessment_type:
+                    data_field = "exercise" if assessment_type == "program" else assessment_type
+                    assessment_name = block.get("data", {}).get(data_field)
+                    assessments.append(assessment_name)
 
-	return assessments
+    return assessments
 
 
 @frappe.whitelist()
 def get_badges(member: str):
-	if not has_quiz_role():
-		frappe.throw(_("You do not have permission to access badges."), frappe.PermissionError)
+    if not has_quiz_role():
+        frappe.throw(
+            _("You do not have permission to access badges."), frappe.PermissionError)
 
-	badges = frappe.get_all(
-		"Badge Assignment",
-		{"member": member},
-		["name", "member", "badge", "badge_image", "badge_description", "issued_on"],
-	)
+    badges = frappe.get_all(
+        "Badge Assignment",
+        {"member": member},
+        ["name", "member", "badge", "badge_image",
+         "badge_description", "issued_on"],
+    )
 
-	return badges
+    return badges
 
 
 @frappe.whitelist()
 def clear_demo_data():
-	frappe.only_for("Moderator")
-	quiz_title = "Do you know Frappe Learning?"
-	if frappe.db.exists("Quiz", {"title": quiz_title}):
-		frappe.db.delete("Quiz", {"title": quiz_title})
+    frappe.only_for("Moderator")
+    quiz_title = "Do you know Frappe Learning?"
+    if frappe.db.exists("Quiz", {"title": quiz_title}):
+        frappe.db.delete("Quiz", {"title": quiz_title})
 
-	demo_course = frappe.get_all("Course", {"title": "A guide to Frappe Learning"}, pluck="name")
+    demo_course = frappe.get_all(
+        "Course", {"title": "A guide to Frappe Learning"}, pluck="name")
 
-	if len(demo_course):
-		delete_course(demo_course[0])
+    if len(demo_course):
+        delete_course(demo_course[0])
 
-	users = ["ash@ipp.com", "john.doe@example.com", "jane.smith@example.com", "jannat@example.com"]
-	for user in users:
-		if frappe.db.exists("User", user):
-			frappe.delete_doc("User", user, ignore_permissions=True)
+    users = ["ash@ipp.com", "john.doe@example.com",
+             "jane.smith@example.com", "jannat@example.com"]
+    for user in users:
+        if frappe.db.exists("User", user):
+            frappe.delete_doc("User", user, ignore_permissions=True)
 
-	frappe.db.set_single_value("Settings", "demo_data_present", False)
+    frappe.db.set_single_value("Settings", "demo_data_present", False)
 
 
 @frappe.whitelist()
 def search_users_by_role(txt: str = "", roles: str | list | None = None, page_length: int = 10):
-	"""Returns users with `roles` in search_link format"""
-	frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
-	if not roles:
-		return []
+    """Returns users with `roles` in search_link format"""
+    frappe.only_for(["Moderator", "Course Creator", "Batch Evaluator"])
+    if not roles:
+        return []
 
-	if isinstance(roles, str):
-		roles = json.loads(roles)
+    if isinstance(roles, str):
+        roles = json.loads(roles)
 
-	invalid_roles = set(roles) - set(QUIZ_ROLES)
-	if invalid_roles:
-		frappe.throw(_("Cannot search for roles: {0}").format(", ".join(invalid_roles)))
+    invalid_roles = set(roles) - set(QUIZ_ROLES)
+    if invalid_roles:
+        frappe.throw(_("Cannot search for roles: {0}").format(
+            ", ".join(invalid_roles)))
 
-	users_with_roles = frappe.get_all(
-		"Has Role",
-		filters={"role": ["in", roles], "parenttype": "User"},
-		pluck="parent",
-		distinct=True,
-	)
+    users_with_roles = frappe.get_all(
+        "Has Role",
+        filters={"role": ["in", roles], "parenttype": "User"},
+        pluck="parent",
+        distinct=True,
+    )
 
-	if not users_with_roles:
-		return []
+    if not users_with_roles:
+        return []
 
-	results = frappe.get_all(
-		"User",
-		filters=[
-			["name", "in", users_with_roles],
-			["name", "not in", ["Administrator", "Guest"]],
-			["enabled", "=", 1],
-		],
-		or_filters=[
-			["full_name", "like", f"%{txt}%"],
-			["name", "like", f"%{txt}%"],
-		],
-		fields=["name", "full_name"],
-		limit_page_length=cint(page_length),
-		order_by="full_name asc",
-	)
+    results = frappe.get_all(
+        "User",
+        filters=[
+                ["name", "in", users_with_roles],
+                ["name", "not in", ["Administrator", "Guest"]],
+                ["enabled", "=", 1],
+        ],
+        or_filters=[
+            ["full_name", "like", f"%{txt}%"],
+            ["name", "like", f"%{txt}%"],
+        ],
+        fields=["name", "full_name"],
+        limit_page_length=cint(page_length),
+        order_by="full_name asc",
+    )
 
-	return [
-		{"value": r.name, "description": r.full_name or r.name, "label": r.full_name or r.name}
-		for r in results
-	]
+    return [
+        {"value": r.name, "description": r.full_name or r.name,
+            "label": r.full_name or r.name}
+        for r in results
+    ]
 
 
 @frappe.whitelist()
 def export_course_as_zip(course_name: str):
-	if not can_modify_course(course_name):
-		frappe.throw(_("You do not have permission to export this course."), frappe.PermissionError)
+    if not can_modify_course(course_name):
+        frappe.throw(
+            _("You do not have permission to export this course."), frappe.PermissionError)
 
-	export_course_zip(course_name)
+    export_course_zip(course_name)
 
 
 @frappe.whitelist()
 def import_course_from_zip(zip_file_path: str):
-	frappe.only_for(["Moderator", "Course Creator"])
-	return import_course_zip(zip_file_path)
+    frappe.only_for(["Moderator", "Course Creator"])
+    return import_course_zip(zip_file_path)
+
+
+# ─── CRM Lead Evaluation ────────────────────────────────────────────────────
+
+
+@frappe.whitelist()
+def get_evaluation_data(quiz_name: str, submission_name: str = None):
+    """Return quiz questions with full details and, if provided, the existing
+    submission answers so the frontend can pre-populate the form."""
+
+    try:
+        quiz = frappe.get_doc("Quiz", quiz_name)
+    except frappe.DoesNotExistError:
+        frappe.throw(_("Evaluation template {0} not found").format(quiz_name))
+
+    raw_questions = quiz.questions
+
+    questions = []
+    for q in raw_questions:
+        qd = frappe.db.get_value(
+            "Question",
+            q.question,
+            [
+                "name",
+                "question",
+                "type",
+                "multiple",
+                "option_1",
+                "option_2",
+                "option_3",
+                "option_4",
+            ],
+            as_dict=1,
+        )
+        if qd:
+            qd["marks"] = q.marks
+            questions.append(qd)
+
+    # Build an answer map from an existing submission
+    answers = {}
+    submission_score = None
+    if submission_name:
+        result_rows = frappe.get_all(
+            "Quiz Result",
+            filters={"parent": submission_name},
+            fields=["question_name", "answer"],
+        )
+        answers = {r.question_name: r.answer for r in result_rows}
+        submission_score = frappe.db.get_value(
+            "Quiz Submission",
+            submission_name,
+            ["score", "score_out_of", "percentage"],
+            as_dict=1,
+        )
+
+    return {"quiz": quiz, "questions": questions, "answers": answers, "submission_score": submission_score}
+
+
+@frappe.whitelist()
+def save_evaluation(quiz_name: str, lead_name: str, answers: str, submission_name: str = None):
+    """Create a new Quiz Submission (or update an existing one) and link it
+    to a CRM Lead via the custom_submission field.
+
+    ``answers`` is a JSON-encoded list:
+      [{"question_name": "<Question name>", "answer": "<answer text>"}, ...]
+    """
+    from quiz_crm.quiz_crm.doctype.quiz.quiz import calculate_weighted_marks
+
+    answers_list = json.loads(answers) if isinstance(answers, str) else answers
+
+    # Fetch quiz details for scoring
+    quiz_details = frappe.db.get_value(
+        "Quiz",
+        quiz_name,
+        ["total_marks", "passing_percentage"],
+        as_dict=1,
+    )
+    score_out_of = cint(quiz_details.total_marks) if quiz_details else 0
+    passing_percentage = flt(
+        quiz_details.passing_percentage) if quiz_details else 0
+
+    # Build scored result rows
+    result_rows = _build_evaluation_results(
+        quiz_name, answers_list, calculate_weighted_marks)
+
+    if submission_name:
+        submission = frappe.get_doc("Quiz Submission", submission_name)
+        submission.result = []
+        for row in result_rows:
+            submission.append("result", row)
+        submission.score_out_of = score_out_of
+        submission.save(ignore_permissions=True)
+    else:
+        submission = frappe.new_doc("Quiz Submission")
+        submission.update(
+            {
+                "quiz": quiz_name,
+                "result": result_rows,
+                "score": 0,
+                "score_out_of": score_out_of,
+                # "member": frappe.session.user,
+                "percentage": 0,
+                "passing_percentage": passing_percentage,
+            }
+        )
+        submission.save(ignore_permissions=True)
+
+        # Link the new submission to the CRM Lead using doc.save()
+        lead_doc = frappe.get_doc("CRM Lead", lead_name)
+        lead_doc.custom_submission = submission.name
+        lead_doc.custom_evaluation_template = quiz_name
+        lead_doc.save(ignore_permissions=True)
+
+    return {"submission": submission.name}
+
+
+def _build_evaluation_results(quiz_name: str, answers_list: list, calculate_weighted_marks) -> list:
+    """Score each answer and return a list of Quiz Result row dicts."""
+    result_rows = []
+
+    for item in answers_list:
+        question_name = item["question_name"]
+        raw_answer = item.get("answer") or ""
+
+        # Look up the question's entry in the quiz to get marks and type
+        qq = frappe.db.get_value(
+            "Quiz Question",
+            {"parent": quiz_name, "question": question_name},
+            ["marks", "type"],
+            as_dict=1,
+        )
+        if not qq:
+            # Question not found in quiz — store with 0 marks
+            result_rows.append(
+                {
+                    "question_name": question_name,
+                    "question": item.get("question", ""),
+                    "answer": raw_answer,
+                    "is_correct": 0,
+                    "marks": 0,
+                    "marks_out_of": cint(0),
+                }
+            )
+            continue
+
+        max_marks = flt(qq.marks)
+        q_type = qq.type or "Open Ended"
+
+        if q_type == "Choices":
+            # Answer may be comma-separated (multi-select) or a single value
+            selected = [a.strip() for a in raw_answer.split(",") if a.strip()]
+            earned = calculate_weighted_marks(
+                question_name, selected, max_marks)
+            result_rows.append(
+                {
+                    "question_name": question_name,
+                    "question": item.get("question", ""),
+                    "answer": raw_answer,
+                    "is_correct": 1 if earned > 0 else 0,
+                    "marks": earned,
+                    "marks_out_of": cint(max_marks),
+                }
+            )
+        else:
+            # User Input / Open Ended — store the text answer with 0 auto-score
+            result_rows.append(
+                {
+                    "question_name": question_name,
+                    "question": item.get("question", ""),
+                    "answer": raw_answer,
+                    "is_correct": 0,
+                    "marks": 0,
+                    "marks_out_of": cint(max_marks),
+                }
+            )
+
+    return result_rows
