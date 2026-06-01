@@ -10,7 +10,7 @@ from frappe.utils import cint, flt
 
 class QuizSubmission(Document):
 	def validate(self):
-		if self.lead:
+		if hasattr(self, 'lead') and self.lead:
 			lead_doc= frappe.get_doc("Lead", self.lead)
 			if lead_doc:
 				lead_doc.custom_submission = self.name
