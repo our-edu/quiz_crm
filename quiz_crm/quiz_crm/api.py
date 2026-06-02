@@ -2561,6 +2561,14 @@ def save_evaluation(quiz_name: str, lead_name: str, answers: str, submission_nam
         lead_doc = frappe.get_doc("CRM Lead", lead_name)
         lead_doc.custom_submission = submission.name
         lead_doc.custom_evaluation_template = quiz_name
+        # change the lead status
+        lead_statuses = set(frappe.get_all("CRM Lead Status", pluck="name"))
+        if submission.percentage >= passing_percentage:
+            if "Qualified" in lead_statuses:
+                lead_doc.status = "Qualified"
+        else:
+            if "Unqualified" in lead_statuses:
+                lead_doc.status = "Unqualified"
         lead_doc.save(ignore_permissions=True)
 
     return {"submission": submission.name}
