@@ -2550,26 +2550,28 @@ def save_evaluation(quiz_name: str, lead_name: str, answers: str, submission_nam
                 "result": result_rows,
                 "score": 0,
                 "score_out_of": score_out_of,
-                # "member": frappe.session.user,
+                "member": frappe.session.user,
                 "percentage": 0,
                 "passing_percentage": passing_percentage,
             }
         )
         submission.save(ignore_permissions=True)
 
-        # Link the new submission to the CRM Lead using doc.save()
-        lead_doc = frappe.get_doc("CRM Lead", lead_name)
-        lead_doc.custom_submission = submission.name
-        lead_doc.custom_evaluation_template = quiz_name
-        # change the lead status
-        lead_statuses = set(frappe.get_all("CRM Lead Status", pluck="name"))
-        if submission.percentage >= passing_percentage:
-            if "Qualified" in lead_statuses:
-                lead_doc.status = "Qualified"
-        else:
-            if "Unqualified" in lead_statuses:
-                lead_doc.status = "Unqualified"
-        lead_doc.save(ignore_permissions=True)
+    # Link the new submission to the CRM Lead using doc.save()
+    lead_doc = frappe.get_doc("CRM Lead", lead_name)
+    lead_doc.custom_submission = submission.name
+    lead_doc.custom_evaluation_template = quiz_name
+    # change the lead status
+    lead_statuses = set(frappe.get_all("CRM Lead Status", pluck="name"))
+    if submission.percentage >= passing_percentage:
+        if "Qualified" in lead_statuses:
+            lead_doc.status = "Qualified"
+    else:
+        if "Unqualified" in lead_statuses:
+            lead_doc.lost_reason = "Poor Fit"
+            lead_doc.lost_notes = "Failed in Evaluation"
+            lead_doc.status = "Unqualified"
+    lead_doc.save(ignore_permissions=True)
 
     return {"submission": submission.name}
 
