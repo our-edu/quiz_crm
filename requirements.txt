@@ -1,2 +1,2 @@
 frappe
-Markdown>=3.7
+requirements.txt
