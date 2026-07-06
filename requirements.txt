@@ -1,2 +1,5 @@
 frappe
 Markdown>=3.7
+beautifulsoup4>=4.12
+requests>=2.31.0
+fuzzywuzzy>=0.18.0
