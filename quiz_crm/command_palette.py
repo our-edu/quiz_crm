@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import nowdate
 
-
+# 
 @frappe.whitelist()
 def search_sqlite(query: str):
 	from quiz_crm.sqlite import LearningSearch, LearningSearchIndexMissingError
