@@ -1,1 +1,2 @@
 frappe
+Markdown>=3.7
