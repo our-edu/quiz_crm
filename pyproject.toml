@@ -6,7 +6,6 @@ description = "Quiz and Question management for CRM"
 authors = [
     { name = "OurEdu", email = "dev@ouredu.com" }
 ]
-dependencies = []
 
 [build-system]
 requires = ["setuptools"]
