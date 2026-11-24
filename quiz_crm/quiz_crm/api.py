@@ -2578,7 +2578,10 @@ def save_evaluation(quiz_name: str, lead_name: str, answers: str, submission_nam
 
 def _build_evaluation_results(quiz_name: str, answers_list: list, calculate_weighted_marks) -> list:
     """Score each answer and return a list of Quiz Result row dicts."""
+    from quiz_crm.quiz_crm.doctype.quiz.quiz import open_ended_marks
+
     result_rows = []
+    full_mark_open_ended = cint(frappe.db.get_value("Quiz", quiz_name, "full_mark_open_ended"))
 
     for item in answers_list:
         question_name = item["question_name"]
@@ -2613,6 +2616,19 @@ def _build_evaluation_results(quiz_name: str, answers_list: list, calculate_weig
             selected = [a.strip() for a in raw_answer.split(",") if a.strip()]
             earned = calculate_weighted_marks(
                 question_name, selected, max_marks)
+            result_rows.append(
+                {
+                    "question_name": question_name,
+                    "question": item.get("question", ""),
+                    "answer": raw_answer,
+                    "is_correct": 1 if earned > 0 else 0,
+                    "marks": earned,
+                    "marks_out_of": cint(max_marks),
+                }
+            )
+        elif q_type == "Open Ended" and full_mark_open_ended:
+            # Quiz grants full marks to any non-empty open ended answer
+            earned = open_ended_marks(raw_answer, max_marks)
             result_rows.append(
                 {
                     "question_name": question_name,

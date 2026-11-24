@@ -129,6 +129,16 @@
 						v-model="quizDetails.doc.marks_to_cut"
 						:label="__('Marks to Deduct')"
 					/>
+					<Switch
+						v-model="quizDetails.doc.full_mark_open_ended"
+						size="sm"
+						:label="__('Full Mark to Open-ended')"
+						:description="
+							__(
+								'Allow open ended questions with other types; any answer gets full marks, no answer gets zero.'
+							)
+						"
+					/>
 				</div>
 			</div>
 		</div>
