@@ -9,7 +9,7 @@ import frappe
 from frappe import _, safe_decode
 from frappe.core.doctype.file.utils import get_random_filename
 from frappe.model.document import Document
-from frappe.utils import cint, comma_and, cstr, flt
+from frappe.utils import cint, comma_and, cstr, flt, strip_html
 from frappe.utils.file_manager import safe_b64decode
 from fuzzywuzzy import fuzz
 
@@ -62,14 +62,16 @@ class Quiz(Document):
 		types = set(types)
 
 		if "Open Ended" in types:
-			if len(types) > 1:
+			if len(types) == 1:
+				self.show_answers = 0
+			elif not self.full_mark_open_ended:
+				# mixed quizzes are only allowed when open ended answers are auto-graded;
+				# otherwise they would need manual review alongside auto-scored questions
 				frappe.throw(
 					_(
-						"If you want open ended questions then make sure each question in the quiz is of open ended type."
-					)
+						"If you want open ended questions then make sure each question in the quiz is of open ended type, or enable {0}."
+					).format(frappe.bold(_("Full Mark to Open-ended")))
 				)
-			else:
-				self.show_answers = 0
 
 	def autoname(self):
 		if not self.name:
@@ -91,6 +93,16 @@ class Quiz(Document):
 
 		if result:
 			return result[0]
+
+
+def open_ended_marks(answer, max_marks) -> float:
+	"""Marks for an open ended answer on a quiz with "Full Mark to Open-ended": the
+	full marks when anything was answered (ignoring empty HTML from the editor),
+	zero otherwise."""
+	if isinstance(answer, (list, tuple)):
+		answer = " ".join(cstr(a) for a in answer)
+	has_answer = bool(strip_html(cstr(answer)).strip()) or "<img" in cstr(answer)
+	return flt(max_marks) if has_answer else 0.0
 
 
 def set_total_marks(questions: list) -> int:
@@ -116,6 +128,7 @@ def submit_quiz(quiz: str, results: str):
 			"course",
 			"enable_negative_marking",
 			"marks_to_cut",
+			"full_mark_open_ended",
 		],
 		as_dict=1,
 	)
@@ -168,11 +181,18 @@ def process_results(results: list, quiz_details: dict):
 			result["is_correct"] = 1 if marks_earned > 0 else 0
 
 		else:
-			is_open_ended = True
-			result["is_correct"] = 0
 			result["answer"] = re.sub(
 				r'<img[^>]*src\s*=\s*["\'](?=data:)(.*?)["\']', _save_file, result["answer"][0]
 			)
+			if quiz_details.get("full_mark_open_ended"):
+				# auto-graded: no instructor review needed
+				marks_earned = open_ended_marks(result["answer"], question_details.marks)
+				result["marks"] = marks_earned
+				score += marks_earned
+				result["is_correct"] = 1 if marks_earned > 0 else 0
+			else:
+				is_open_ended = True
+				result["is_correct"] = 0
 
 	return {
 		"results": results,
