@@ -2459,6 +2459,7 @@ def import_course_from_zip(zip_file_path: str):
 def get_evaluation_data(quiz_name: str, submission_name: str = None):
     """Return quiz questions with full details and, if provided, the existing
     submission answers so the frontend can pre-populate the form."""
+    from quiz_crm.quiz_crm.doctype.question.question import add_legacy_option_keys, get_question_options
 
     try:
         quiz = frappe.get_doc("Quiz", quiz_name)
@@ -2472,20 +2473,13 @@ def get_evaluation_data(quiz_name: str, submission_name: str = None):
         qd = frappe.db.get_value(
             "Question",
             q.question,
-            [
-                "name",
-                "question",
-                "type",
-                "multiple",
-                "option_1",
-                "option_2",
-                "option_3",
-                "option_4",
-            ],
+            ["name", "question", "type", "multiple"],
             as_dict=1,
         )
         if qd:
             qd["marks"] = q.marks
+            qd["options"] = [o.option for o in get_question_options(q.question)]
+            add_legacy_option_keys(qd, [{"option": o} for o in qd["options"]])
             questions.append(qd)
 
     # Build an answer map from an existing submission

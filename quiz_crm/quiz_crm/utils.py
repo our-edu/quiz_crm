@@ -1259,13 +1259,16 @@ def get_question_details(question: str) -> dict:
 	if not has_quiz_role():
 		frappe.throw(_("You are not authorized to view the question details."))
 
-	fields = ["question", "type", "multiple"]
-	for i in range(1, 5):
-		fields.append(f"option_{i}")
-		fields.append(f"explanation_{i}")
+	from quiz_crm.quiz_crm.doctype.question.question import add_legacy_option_keys, get_question_options
 
-	question_details = frappe.db.get_value("Question", question, fields, as_dict=1)
-	return question_details
+	question_details = frappe.db.get_value("Question", question, ["question", "type", "multiple"], as_dict=1)
+	if not question_details:
+		return question_details
+	# option texts and explanations only: weights reveal the answers to quiz takers
+	question_details.options = [
+		{"option": o.option, "explanation": o.explanation} for o in get_question_options(question)
+	]
+	return add_legacy_option_keys(question_details, question_details.options)
 
 
 @frappe.whitelist(allow_guest=True)
