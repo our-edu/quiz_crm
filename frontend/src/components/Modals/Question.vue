@@ -72,28 +72,49 @@
 					>
 						{{ __('Possibilities') }}
 					</div>
-					<div
-						v-if="question.type == 'Choices'"
-						class="grid grid-cols-2 gap-x-8 gap-y-4"
-					>
-						<div v-for="n in 4" class="space-y-4 py-2">
+					<div v-if="question.type == 'Choices'" class="space-y-3">
+						<div
+							v-for="(option, i) in question.options"
+							:key="i"
+							class="grid grid-cols-12 gap-x-3 items-end border-b pb-3"
+						>
 							<FormControl
-								:label="__('Option') + ' ' + n"
-								v-model="question[`option_${n}`]"
-								:required="n <= 2 ? true : false"
+								class="col-span-5"
+								:label="__('Option') + ' ' + (i + 1)"
+								v-model="option.option"
+								:required="i < 2"
 							/>
 							<FormControl
+								class="col-span-4"
 								:label="__('Explanation')"
-								v-model="question[`explanation_${n}`]"
+								v-model="option.explanation"
 							/>
 							<FormControl
+								class="col-span-2"
 								:label="question.weight_type === 'Points' ? __('Points (max: ') + (question.marks || 1) + ')' : __('Weight (%)')"
-								v-model="question[`weight_${n}`]"
+								v-model="option.weight"
 								type="number"
 								:min="0"
 								:max="question.weight_type === 'Points' ? (question.marks || 1) : 100"
 							/>
+							<Button
+								class="col-span-1"
+								variant="ghost"
+								:disabled="question.options.length <= 2"
+								:title="__('Remove option')"
+								@click="question.options.splice(i, 1)"
+							>
+								<template #icon>
+									<Trash2 class="w-4 h-4 stroke-1.5" />
+								</template>
+							</Button>
 						</div>
+						<Button @click="question.options.push(emptyOption())">
+							<template #prefix>
+								<Plus class="w-4 h-4 stroke-1.5" />
+							</template>
+							{{ __('Add Option') }}
+						</Button>
 					</div>
 					<div
 						v-else-if="question.type == 'User Input'"
@@ -141,6 +162,7 @@ import {
 } from 'frappe-ui'
 import { watch, reactive, ref, inject } from 'vue'
 import Link from '@/components/Controls/Link.vue'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import { useOnboarding } from 'frappe-ui/frappe'
 
 const show = defineModel()
@@ -160,16 +182,25 @@ const question = reactive({
 	type: 'Choices',
 	marks: 1,
 	weight_type: 'Percentage',
+	options: [],
 })
 
+// a choice question has any number of options (Question Option rows); two to start
+const emptyOption = () => ({ option: '', explanation: '', weight: 0 })
+
+// the rows to save: no blank options, numeric weights, no stale row metadata
+const cleanOptions = () =>
+	question.options
+		.filter((o) => (o.option || '').trim())
+		.map((o) => ({
+			option: o.option,
+			explanation: o.explanation || '',
+			weight: parseFloat(o.weight) || 0,
+		}))
+
 const populateFields = () => {
-	let fields = ['option', 'explanation', 'possibility', 'weight']
-	fields.forEach((field) => {
-		for (let n = 1; n <= 4; n++) {
-			if (field === 'weight') question[`${field}_${n}`] = 0
-			else question[`${field}_${n}`] = null
-		}
-	})
+	for (let n = 1; n <= 4; n++) question[`possibility_${n}`] = null
+	question.options = [emptyOption(), emptyOption()]
 	question.multiple = false
 	question.weight_type = 'Percentage'
 }
@@ -197,15 +228,16 @@ const questionData = createResource({
 	},
 	auto: false,
 	onSuccess(data) {
-		let counter = 1
 		editMode.value = true
 		Object.keys(data).forEach((key) => {
 			if (Object.hasOwn(question, key)) question[key] = data[key]
 		})
-		while (counter <= 4) {
-			question[`weight_${counter}`] = data[`weight_${counter}`] || 0
-			counter++
-		}
+		question.options = (data.options || []).map((o) => ({
+			option: o.option,
+			explanation: o.explanation || '',
+			weight: o.weight || 0,
+		}))
+		while (question.options.length < 2) question.options.push(emptyOption())
 		question.multiple = data.multiple ? true : false
 		question.weight_type = data.weight_type || 'Percentage'
 		question.marks = props.questionDetail.marks
@@ -249,13 +281,11 @@ const questionCreation = createResource({
 	url: 'frappe.client.insert',
 	makeParams(values) {
 		const { marks, ...questionDoc } = question
-		for (let n = 1; n <= 4; n++) {
-			questionDoc[`weight_${n}`] = parseFloat(questionDoc[`weight_${n}`]) || 0
-		}
 		return {
 			doc: {
 				doctype: 'Question',
 				...questionDoc,
+				options: questionDoc.type === 'Choices' ? cleanOptions() : [],
 				multiple: questionDoc.multiple ? 1 : 0,
 			},
 		}
@@ -264,12 +294,16 @@ const questionCreation = createResource({
 
 const submitQuestion = () => {
 	if (question.type === 'Choices') {
+		const options = cleanOptions()
+		if (options.length < 2) {
+			toast.warning(__('Add at least two options.'))
+			return
+		}
 		const maxW = question.weight_type === 'Points' ? parseFloat(question.marks || 1) : 100
-		for (let n = 1; n <= 4; n++) {
-			const w = parseFloat(question[`weight_${n}`]) || 0
-			if (w < 0 || w > maxW) {
+		for (const [i, option] of options.entries()) {
+			if (option.weight < 0 || option.weight > maxW) {
 				const unit = question.weight_type === 'Points' ? `points (max: ${maxW})` : '% (max: 100)'
-				toast.warning(`Weight for Option ${n} must be between 0 and ${maxW} ${unit}.`)
+				toast.warning(`Weight for Option ${i + 1} must be between 0 and ${maxW} ${unit}.`)
 				return
 			}
 		}
@@ -330,14 +364,12 @@ const questionUpdate = createResource({
 	auto: false,
 	makeParams(values) {
 		const { marks, ...questionDoc } = question
-		for (let n = 1; n <= 4; n++) {
-			questionDoc[`weight_${n}`] = parseFloat(questionDoc[`weight_${n}`]) || 0
-		}
 		return {
 			doctype: 'Question',
 			name: questionData.data?.name,
 			fieldname: {
 				...questionDoc,
+				options: questionDoc.type === 'Choices' ? cleanOptions() : [],
 				multiple: questionDoc.multiple ? 1 : 0,
 			},
 		}

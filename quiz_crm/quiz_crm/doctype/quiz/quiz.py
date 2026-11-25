@@ -202,42 +202,30 @@ def process_results(results: list, quiz_details: dict):
 
 
 def verify_answer(question: str, answer: list):
+	"""Whether the answer is fully correct: an option is correct when its weight is
+	above zero. Multiple selection must pick every correct option and nothing else."""
 	question_details = get_question_details(question)
-	correct = False
+	correct_options = {o.option for o in question_details.options if flt(o.weight) > 0}
+	selected = {o.option for o in question_details.options if o.option in answer}
 
 	if question_details.multiple:
-		for num in range(1, 5):
-			if question_details[f"option_{num}"] in answer:
-				correct = question_details[f"is_correct_{num}"]
-				if not correct:
-					return False
-			if question_details[f"is_correct_{num}"] and question_details[f"option_{num}"] not in answer:
-				return False
-		return True
-
-	for num in range(1, 5):
-		if question_details[f"option_{num}"] in answer:
-			correct = question_details[f"is_correct_{num}"]
-	return correct
+		return bool(correct_options) and selected == correct_options
+	return bool(selected) and selected <= correct_options
 
 
 def calculate_weighted_marks(question_name: str, selected_answers: list, max_marks) -> float:
-	fields = ["weight_type"]
-	for num in range(1, 5):
-		fields.append(f"option_{cstr(num)}")
-		fields.append(f"weight_{cstr(num)}")
-	question_details = frappe.db.get_value("Question", question_name, fields, as_dict=1)
-	weight_type = question_details.get("weight_type") or "Percentage"
+	"""Marks earned for the selected option texts: each selected option adds its
+	weight (a percentage of the question's marks, or points), capped at the
+	question's marks so several selected options can't exceed them."""
+	from quiz_crm.quiz_crm.doctype.question.question import get_question_options
+
+	weight_type = frappe.db.get_value("Question", question_name, "weight_type") or "Percentage"
 	earned = 0.0
-	for num in range(1, 5):
-		option_text = question_details.get(f"option_{num}")
-		weight = flt(question_details.get(f"weight_{num}") or 0)
-		if option_text and option_text in selected_answers:
-			if weight_type == "Points":
-				earned += weight
-			else:
-				earned += (weight / 100.0) * flt(max_marks)
-	return earned
+	for option in get_question_options(question_name):
+		if option.option and option.option in selected_answers:
+			weight = flt(option.weight)
+			earned += weight if weight_type == "Points" else (weight / 100.0) * flt(max_marks)
+	return min(earned, flt(max_marks)) if flt(max_marks) > 0 else earned
 
 
 def _save_file(match: re.Match) -> str:
@@ -321,27 +309,25 @@ def check_answer(question: str, question_type: str, answers: str):
 
 
 def get_question_details(question: str):
-	fields = ["multiple"]
-	for num in range(1, 5):
-		fields.append(f"option_{cstr(num)}")
+	from quiz_crm.quiz_crm.doctype.question.question import get_question_options
 
-	question_details = frappe.db.get_value("Question", question, fields, as_dict=1)
+	question_details = frappe.db.get_value("Question", question, ["multiple"], as_dict=1) or frappe._dict()
+	question_details.options = get_question_options(question)
 	return question_details
 
 
 def check_choice_answers(question: str, answers: list):
-	is_correct = []
-	question_details = get_question_details(question)
-
-	for num in range(1, 5):
-		if question_details[f"option_{num}"] in answers:
-			is_correct.append(question_details[f"is_correct_{num}"])
-		elif question_details[f"is_correct_{num}"]:
-			is_correct.append(2)
+	"""One status per option, in order, for the quiz's "show answers" view:
+	1 = selected and correct, 0 = selected and wrong (or not selected and wrong),
+	2 = a correct option that wasn't selected. Correct = weight above zero."""
+	result = []
+	for option in get_question_details(question).options:
+		is_correct = flt(option.weight) > 0
+		if option.option in answers:
+			result.append(1 if is_correct else 0)
 		else:
-			is_correct.append(0)
-
-	return is_correct
+			result.append(2 if is_correct else 0)
+	return result
 
 
 def check_input_answers(question: str, answer: str):

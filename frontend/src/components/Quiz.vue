@@ -136,9 +136,13 @@
 						class="text-ink-gray-9 font-semibold mt-2 leading-5"
 						v-html="questionDetails.data.question"
 					></div>
-					<div v-if="questionDetails.data.type == 'Choices'" v-for="index in 4">
+					<div
+						v-if="questionDetails.data.type == 'Choices'"
+						v-for="(option, optionIdx) in questionDetails.data.options || []"
+						:key="optionIdx"
+					>
 						<label
-							v-if="questionDetails.data[`option_${index}`]"
+							v-if="option.option"
 							class="flex items-center bg-surface-gray-3 rounded-md p-3 mt-4 w-full cursor-pointer focus:border-blue-600"
 						>
 							<input
@@ -146,8 +150,8 @@
 								type="radio"
 								:name="encodeURIComponent(questionDetails.data.question)"
 								class="w-3.5 h-3.5 text-ink-gray-9 focus:ring-outline-gray-modals"
-								@change="markAnswer(index)"
-								:checked="selectedOptions[index - 1]"
+								@change="markAnswer(optionIdx + 1)"
+								:checked="selectedOptions[optionIdx]"
 							/>
 
 							<input
@@ -155,14 +159,14 @@
 								type="checkbox"
 								:name="encodeURIComponent(questionDetails.data.question)"
 								class="w-3.5 h-3.5 text-ink-gray-9 rounded-sm focus:ring-outline-gray-modals"
-								@change="markAnswer(index)"
-								:checked="selectedOptions[index - 1]"
+								@change="markAnswer(optionIdx + 1)"
+								:checked="selectedOptions[optionIdx]"
 							/>
 							<div
 								v-else-if="quiz.data.show_answers"
 								v-for="(answer, idx) in showAnswers"
 							>
-								<div v-if="index - 1 == idx">
+								<div v-if="optionIdx == idx">
 									<CheckCircle
 										v-if="answer == 1"
 										class="w-4 h-4 text-ink-green-2"
@@ -180,16 +184,16 @@
 							</div>
 							<span
 								class="ml-2 text-ink-gray-9"
-								v-html="questionDetails.data[`option_${index}`]"
+								v-html="option.option"
 							>
 							</span>
 						</label>
 						<div
-							v-if="questionDetails.data[`explanation_${index}`]"
+							v-if="option.explanation"
 							class="mt-2 text-xs text-ink-gray-7"
 							v-show="showAnswers.length"
 						>
-							{{ questionDetails.data[`explanation_${index}`] }}
+							{{ option.explanation }}
 						</div>
 					</div>
 					<div v-else-if="questionDetails.data.type == 'User Input'">
@@ -440,7 +444,10 @@ import ProgressBar from '@/components/ProgressBar.vue'
 const user = inject('$user')
 const activeQuestion = ref(0)
 const currentQuestion = ref('')
-const selectedOptions = ref([0, 0, 0, 0])
+// one 0/1 flag per option of the current question (questions have any number of options)
+const selectedOptions = ref([])
+const emptySelection = () =>
+	new Array(questionDetails.data?.options?.length || 0).fill(0)
 const showAnswers = reactive([])
 let questions = reactive([])
 const attemptedQuestions = ref([])
@@ -636,6 +643,7 @@ watch(activeQuestion, (value) => {
 			{},
 			{
 				onSuccess() {
+					selectedOptions.value = emptySelection()
 					if (!quiz.data.show_answers) {
 						loadSavedAnswers()
 					}
@@ -670,11 +678,9 @@ const loadSavedAnswers = () => {
 			if (localAnswers.length) {
 				if (questionDetails.data.type == 'Choices') {
 					localAnswers.forEach((answer) => {
-						for (let i = 1; i <= 4; i++) {
-							if (questionDetails.data[`option_${i}`] == answer) {
-								selectedOptions.value[i - 1] = 1
-							}
-						}
+						;(questionDetails.data.options || []).forEach((option, i) => {
+							if (option.option == answer) selectedOptions.value[i] = 1
+						})
 					})
 				} else {
 					possibleAnswer.value = localAnswers[0]
@@ -700,12 +706,7 @@ const startQuiz = () => {
 }
 
 const markAnswer = (index) => {
-	if (!questionDetails.data.multiple)
-		selectedOptions.value.splice(
-			0,
-			selectedOptions.value.length,
-			...[0, 0, 0, 0]
-		)
+	if (!questionDetails.data.multiple) selectedOptions.value = emptySelection()
 	selectedOptions.value[index - 1] = selectedOptions.value[index - 1] ? 0 : 1
 }
 
@@ -715,7 +716,7 @@ const getAnswers = () => {
 	if (type == 'Choices') {
 		selectedOptions.value.forEach((value, index) => {
 			if (selectedOptions.value[index])
-				answers.push(questionDetails.data[`option_${index + 1}`])
+				answers.push(questionDetails.data.options[index].option)
 		})
 	} else {
 		answers.push(possibleAnswer.value)
@@ -792,7 +793,7 @@ const nextQuestion = () => {
 const resetQuestion = () => {
 	if (activeQuestion.value == quiz.data.questions.length) return
 	activeQuestion.value = activeQuestion.value + 1
-	selectedOptions.value.splice(0, selectedOptions.value.length, ...[0, 0, 0, 0])
+	selectedOptions.value = emptySelection()
 	showAnswers.length = 0
 	possibleAnswer.value = null
 }
@@ -832,7 +833,7 @@ const createSubmission = () => {
 
 const resetQuiz = () => {
 	activeQuestion.value = 0
-	selectedOptions.value.splice(0, selectedOptions.value.length, ...[0, 0, 0, 0])
+	selectedOptions.value = emptySelection()
 	showAnswers.length = 0
 	possibleAnswer.value = null
 	attemptedQuestions.value = []

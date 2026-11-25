@@ -9,10 +9,54 @@ from frappe.model.document import Document
 from quiz_crm.quiz_crm.utils import has_course_instructor_role, has_moderator_role
 
 
+# Before options became a child table, a question had four fixed option fields.
+# Kept to read old data (migration patch, imports of old course exports).
+LEGACY_OPTION_COUNT = 4
+
+
 class Question(Document):
+	def before_validate(self):
+		self.convert_legacy_options()
+
 	def validate(self):
 		validate_correct_answers(self)
 		update_question_title(self)
+
+	def convert_legacy_options(self):
+		"""Turn old-style option_N / weight_N / explanation_N values (e.g. from a
+		course export made before options were a table) into option rows."""
+		if self.type != "Choices" or self.get("options"):
+			return
+		for n in range(1, LEGACY_OPTION_COUNT + 1):
+			option = self.get(f"option_{n}")
+			if option:
+				self.append(
+					"options",
+					{
+						"option": option,
+						"weight": flt(self.get(f"weight_{n}")),
+						"explanation": self.get(f"explanation_{n}"),
+					},
+				)
+
+
+def get_question_options(question_name):
+	"""The question's options in display order: [{option, weight, explanation}]."""
+	return frappe.get_all(
+		"Question Option",
+		filters={"parent": question_name, "parenttype": "Question", "parentfield": "options"},
+		fields=["option", "weight", "explanation"],
+		order_by="idx",
+	)
+
+
+def add_legacy_option_keys(details, options):
+	"""Also expose options as option_N / explanation_N keys, for frontends built
+	before options became a table (they only read the first four)."""
+	for n, option in enumerate(options, start=1):
+		details[f"option_{n}"] = option.get("option")
+		details[f"explanation_{n}"] = option.get("explanation")
+	return details
 
 
 def validate_correct_answers(question):
@@ -25,30 +69,24 @@ def validate_correct_answers(question):
 
 
 def validate_duplicate_options(question):
-	options = []
-
-	for num in range(1, 5):
-		if question.get(f"option_{num}"):
-			options.append(question.get(f"option_{num}"))
-
+	options = [row.option for row in question.get("options") or [] if row.option]
 	if len(set(options)) != len(options):
 		frappe.throw(_("Duplicate options found for this question."))
 
 
 def validate_weights(question):
 	weight_type = question.get("weight_type") or "Percentage"
-	marks = flt(question.get("marks") or 0)
 
-	for n in range(1, 5):
-		w = flt(question.get(f"weight_{n}") or 0)
+	for row in question.get("options") or []:
+		w = flt(row.weight)
 		if w < 0:
-			frappe.throw(_("Weight for Option {0} cannot be negative.").format(n))
+			frappe.throw(_("Weight for Option {0} cannot be negative.").format(row.idx))
 		if weight_type == "Percentage" and w > 100:
-			frappe.throw(_("Weight for Option {0} must be between 0 and 100%.").format(n))
+			frappe.throw(_("Weight for Option {0} must be between 0 and 100%.").format(row.idx))
 
 
 def validate_minimum_options(question):
-	if question.type == "Choices" and (not question.option_1 or not question.option_2):
+	if len([row for row in question.get("options") or [] if row.option]) < 2:
 		frappe.throw(_("Minimum two options are required for multiple choice questions."))
 
 
