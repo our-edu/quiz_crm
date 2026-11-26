@@ -2,7 +2,22 @@
 	<header
 		class="sticky top-0 z-10 flex items-center justify-between border-b bg-surface-white px-3 py-2.5 sm:px-5"
 	>
-		<Breadcrumbs :items="breadcrumbs" />
+		<div class="flex items-center space-x-3 min-w-0">
+			<Breadcrumbs :items="breadcrumbs" />
+			<!-- Meta lead forms (CRM portal, Marketing) that use this quiz as their evaluation template -->
+			<div
+				v-if="linkedLeadForms.data?.length"
+				class="flex items-center space-x-1 text-sm text-ink-gray-5 truncate"
+			>
+				<span>{{ __('Evaluation template of') }}</span>
+				<a
+					v-for="(form, i) in linkedLeadForms.data"
+					:key="form.name"
+					:href="`/crm/marketing/forms/${encodeURIComponent(form.name)}`"
+					class="text-ink-gray-8 underline hover:text-ink-gray-9"
+				>{{ form.form_name || form.name }}{{ i < linkedLeadForms.data.length - 1 ? ',' : '' }}</a>
+			</div>
+		</div>
 		<div v-if="!readOnlyMode" class="flex items-center space-x-2">
 			<Badge v-if="quizDetails.isDirty" theme="orange">
 				{{ __('Not Saved') }}
@@ -271,7 +286,7 @@ const questions = computed(() => {
 })
 
 onMounted(() => {
-	if (!user.data?.is_moderator && !user.data?.is_instructor) {
+	if (!user.data?.is_moderator && !user.data?.is_instructor && !user.data?.is_marketing) {
 		router.push({ name: 'Courses' })
 	}
 	quizDetails.reload()
@@ -293,6 +308,22 @@ const quizDetails = createDocumentResource({
 	doctype: 'Quiz',
 	name: props.quizID,
 	auto: false,
+})
+
+// Lead forms of the Meta integration (another app, may not be installed) that use
+// this quiz as their evaluation template; any error just hides the links.
+const linkedLeadForms = createResource({
+	url: 'frappe.client.get_list',
+	makeParams() {
+		return {
+			doctype: 'Meta Lead Form',
+			filters: { evaluation_template: props.quizID },
+			fields: ['name', 'form_name'],
+			limit_page_length: 20,
+		}
+	},
+	auto: props.quizID && props.quizID !== 'new',
+	onError() {},
 })
 
 const validateTitle = () => {
